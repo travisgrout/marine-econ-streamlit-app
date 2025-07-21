@@ -7,7 +7,7 @@ from textwrap import wrap
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="ENOW Lite Estimates",
+    page_title="ENOW Stopgap Estimates",
     layout="wide"
 )
 
@@ -55,9 +55,8 @@ def get_sector_colors(n):
     return base_colors[:n] if n <= len(base_colors) else plt.cm.viridis(np.linspace(0, 1, n))
 
 # --- Main Application ---
-# --- Main Application ---
 if dorado_results is not None:
-    st.title("ENOW Lite estimates: states and sectors")
+    st.title("ENOW Stopgap estimates: states and sectors")
 
     # --- Sidebar for User Inputs ---
     st.sidebar.header("Filters")
