@@ -1,4 +1,4 @@
-import streamlit as st
+nimport streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ from textwrap import wrap
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="ENOW Lite Estimates",
+    page_title="Ocean Economy Estimates from Public QCEW Data",
     layout="wide"
 )
 
@@ -70,13 +70,13 @@ def get_sector_colors(n):
 
 # --- Main Application ---
 if dorado_results is not None:
-    st.title("ENOW Lite estimates: states and sectors")
+    st.title("Ocean Economy estimates: states and sectors")
 
     # --- Sidebar for User Inputs ---
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
         "Display Mode:",
-        ("Show Estimates for All Years", "Compare to ENOW"),
+        ("Estimates from Public QCEW Data", "Compare to ENOW"),
         index=0
     )
 
@@ -112,7 +112,7 @@ if dorado_results is not None:
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
-    st.subheader("Economic Estimates Plot")
+    st.subheader("Ocean Economy Estimates Plot")
     y_label_map = {
         "GDP": "GDP ($ millions)",
         "RealGDP": "Real GDP ($ millions)",
@@ -125,8 +125,8 @@ if dorado_results is not None:
     
     fig, ax = plt.subplots(figsize=(12, 7))
 
-    # --- Mode 1: Show Estimates for All Years ---
-    if plot_mode == "Show Estimates for All Years":
+    # --- Mode 1: Estimates from Public QCEW Data ---
+    if plot_mode == "Estimates from Public QCEW Data":
         nq_metric_col = f"NQ_{selected_metric}"
         
         plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
