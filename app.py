@@ -70,7 +70,7 @@ def get_sector_colors(n):
 
 # --- Main Application ---
 if dorado_results is not None:
-    st.title("Ocean Economy estimates: states and sectors")
+    st.title("Marine Economy estimates: states and sectors")
 
     # --- Sidebar for User Inputs ---
     st.sidebar.header("Filters")
@@ -89,7 +89,7 @@ if dorado_results is not None:
     metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
 
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
-    selected_sector = st.sidebar.selectbox("Select Ocean Sector:", unique_sectors)
+    selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
     selected_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
 
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
@@ -112,7 +112,7 @@ if dorado_results is not None:
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
-    st.subheader("Ocean Economy Estimates Plot")
+    st.subheader("Estimates Plot")
     y_label_map = {
         "GDP": "GDP ($ millions)",
         "RealGDP": "Real GDP ($ millions)",
@@ -121,7 +121,7 @@ if dorado_results is not None:
         "Establishments": "Establishments (Count)"
     }
     y_label = y_label_map.get(selected_metric, selected_metric)
-    plot_title = f"{selected_metric} in {selected_state} - {selected_sector}"
+    plot_title = f"Marine Economy {selected_metric} in {selected_state} - {selected_sector}"
     
     fig, ax = plt.subplots(figsize=(12, 7))
 
