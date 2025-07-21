@@ -81,7 +81,7 @@ if dorado_results is not None:
     )
 
     geo_names = dorado_results["GeoName"].dropna().unique()
-    unique_states = ["All States"] + sorted(geo_names)
+    unique_states = ["All Coastal States"] + sorted(geo_names)
 
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
     unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
@@ -106,7 +106,7 @@ if dorado_results is not None:
         (dorado_results["Year"] >= year_range[0]) &
         (dorado_results["Year"] <= year_range[1])
     ]
-    if selected_state != "All States":
+    if selected_state != "All Coastal States":
         base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_state]
     if selected_sector != "All Sectors":
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
@@ -147,7 +147,7 @@ if dorado_results is not None:
             else:
                  st.warning("No data available for the selected filters.")
         else:
-            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index() if selected_state == "All States" else plot_df
+            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index() if selected_state == "All Coastal States" else plot_df
             if not bar_df.empty:
                 ax.bar(bar_df["Year"], bar_df["Estimate_value"], color="#0072B2", label="Estimate from public QCEW")
                 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), frameon=False)
