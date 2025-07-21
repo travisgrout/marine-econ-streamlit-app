@@ -69,7 +69,7 @@ if dorado_results is not None:
         "Select Year Range:",
         min_value=int(dorado_results["Year"].min()),
         max_value=int(dorado_results["Year"].max()),
-        value=(2012, int(dorado_results["Year"].max())),
+        value=(2011, int(dorado_results["Year"].max())),
         step=1
     )
 
