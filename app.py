@@ -66,8 +66,14 @@ if dorado_results is not None:
         index=0
     )
 
-    unique_states = ["All States"] + sorted(dorado_results["GeoName"].unique())
-    unique_sectors = ["All Sectors"] + sorted(dorado_results["OceanSector"].unique())
+    # Get unique values and drop any potential nulls/NaNs before sorting
+    geo_names = dorado_results["GeoName"].dropna().unique()
+    unique_states = ["All States"] + sorted(geo_names)
+
+    # Apply the same fix to sectors for robustness
+    ocean_sectors = dorado_results["OceanSector"].dropna().unique()
+    unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
+
     metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
 
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
