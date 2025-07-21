@@ -120,7 +120,7 @@ if dorado_results is not None:
         "Establishments": "Establishments (Count)"
     }
     y_label = y_label_map.get(selected_metric, selected_metric)
-    plot_title = f"Marine Economy {selected_metric} in {selected_state} - {selected_sector}"
+    plot_title = f"Marine Economy {selected_metric} in {selected_state} - {selected_sector} Sector"
     
     fig, ax = plt.subplots(figsize=(12, 7))
 
