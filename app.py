@@ -1,49 +1,43 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from textwrap import wrap
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="ENOW Stopgap Estimates",
+    page_title="ENOW Lite Estimates",
     layout="wide"
 )
 
-# --- Data Loading and Preparation ---
+# --- Data Loading and Caching ---
 @st.cache_data
 def load_data():
     """
-    Loads, cleans, and prepares the dataset.
-    This function is cached to improve performance.
+    Loads, cleans, and prepares the dataset from a CSV file.
+    This function is cached to enhance performance.
     """
     try:
-        # Load the dataset from the CSV file
         df = pd.read_csv("DORADO_combined_sectors.csv")
-
         # Rename columns for consistency, similar to the R script
         rename_dict = {
             "NQ_establishments": "NQ_Establishments",
             "NQ_employment": "NQ_Employment",
             "NQ_wages": "NQ_Wages",
-            "NP_establishments": "NP_Establishments",
-            "NP_employment": "NP_Employment",
-            "NP_wages": "NP_Wages"
         }
         df.rename(columns=rename_dict, inplace=True)
         return df
     except FileNotFoundError:
-        # Display an error message if the data file is not found
-        st.error("Error: 'DORADO_combined_sectors.csv' not found. Please make sure the data file is in the same directory as the app.py script.")
+        st.error("Error: The data file 'DORADO_combined_sectors.csv' was not found. Please ensure it is in the same directory as the app script.")
         return None
 
-# Load the data using the cached function
+# Load the data
 dorado_results = load_data()
 
 # --- Helper Functions ---
 def format_value(x, metric):
-    """
-    Formats numbers with commas and dollar signs, similar to the R helper function.
-    """
+    """Formats numbers with commas and appropriate currency symbols."""
     if pd.isna(x):
         return "N/A"
     if metric in ["Wages", "GDP", "RealGDP"]:
@@ -51,138 +45,161 @@ def format_value(x, metric):
     else:
         return f"{x:,.0f}"
 
+def get_sector_colors(n):
+    """Provides a list of distinct, colorblind-friendly colors."""
+    base_colors = [
+        "#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77",
+        "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9",
+        "#009E73", "#F0E442"
+    ]
+    return base_colors[:n] if n <= len(base_colors) else plt.cm.viridis(np.linspace(0, 1, n))
+
 # --- Main Application ---
 if dorado_results is not None:
+    st.title("ENOW Lite estimates: states and sectors")
+
     # --- Sidebar for User Inputs ---
     st.sidebar.header("Filters")
+    plot_mode = st.sidebar.radio(
+        "Display Mode:",
+        ("Show Estimates for All Years", "Compare to ENOW"),
+        index=0
+    )
 
-    # Get unique values for dropdowns
     unique_states = ["All States"] + sorted(dorado_results["GeoName"].unique())
     unique_sectors = ["All Sectors"] + sorted(dorado_results["OceanSector"].unique())
     metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
 
-    # Create widgets for user input
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
     selected_sector = st.sidebar.selectbox("Select Ocean Sector:", unique_sectors)
     selected_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+
+    min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     year_range = st.sidebar.slider(
         "Select Year Range:",
-        min_value=int(dorado_results["Year"].min()),
-        max_value=int(dorado_results["Year"].max()),
-        value=(2011, int(dorado_results["Year"].max())),
+        min_value=min_year,
+        max_value=max_year,
+        value=(2012, 2021),
         step=1
     )
 
-    # --- Data Filtering Logic ---
-    # Filter data based on user selections
+    # --- Data Filtering and Processing ---
+    enow_metric_col = selected_metric
+    nq_metric_col = f"NQ_{selected_metric}"
+
+    # Base filtering on user selections
     filtered_df = dorado_results[
         (dorado_results["Year"] >= year_range[0]) &
         (dorado_results["Year"] <= year_range[1])
     ]
-
     if selected_state != "All States":
         filtered_df = filtered_df[filtered_df["GeoName"] == selected_state]
-
     if selected_sector != "All Sectors":
         filtered_df = filtered_df[filtered_df["OceanSector"] == selected_sector]
 
-    # Define the metric columns to be used based on the selected metric
-    nq_metric_col = f"NQ_{selected_metric}"
-    np_metric_col = f"NP_{selected_metric}"
-    enow_metric_col = selected_metric
-
-    # Create a smaller DataFrame with only the necessary columns
-    plot_df = filtered_df[["Year", enow_metric_col, nq_metric_col, np_metric_col]].copy()
+    # Select and rename columns
+    plot_df = filtered_df[["Year", "OceanSector", enow_metric_col, nq_metric_col]].copy()
     plot_df.rename(columns={
         enow_metric_col: "ENOW_value",
-        nq_metric_col: "QCEW_w_imputation",
-        np_metric_col: "NPStates_est"
+        nq_metric_col: "Estimate_value"
     }, inplace=True)
-
-    # If GDP or RealGDP, divide by 1 million for better readability on the chart
-    if selected_metric in ["GDP", "RealGDP"]:
+    
+    # Scale values for display
+    if selected_metric in ["GDP", "RealGDP", "Wages"]:
         plot_df["ENOW_value"] /= 1e6
-        plot_df["QCEW_w_imputation"] /= 1e6
-        plot_df["NPStates_est"] /= 1e6
+        plot_df["Estimate_value"] /= 1e6
 
-    # If 'All States' or 'All Sectors' is selected, aggregate the data by year
-    if selected_state == "All States" or selected_sector == "All Sectors":
-        plot_df = plot_df.groupby("Year").sum().reset_index()
-
-    # --- Main Panel Display ---
-    st.title("ENOW Stopgap Estimates: States and Sectors")
-
-    # --- Comparison Plot ---
+    # --- Plotting and Statistics Logic ---
     st.subheader("Comparison Plot")
 
-    if not plot_df.empty:
-        # Define plot labels and styles
-        y_label_map = {
-            "GDP": "GDP ($ millions)",
-            "RealGDP": f"Real GDP ({year_range[0]} $ millions)",
-            "Wages": "Wages (USD)",
-            "Employment": "Employment (Number of Jobs)",
-            "Establishments": "Establishments (Count)"
-        }
-        y_label = y_label_map.get(selected_metric, selected_metric)
+    y_label_map = {
+        "GDP": "GDP ($ millions)",
+        "RealGDP": "Real GDP ($ millions)",
+        "Wages": "Wages ($ millions)",
+        "Employment": "Employment (number of jobs)",
+        "Establishments": "Establishments (count)"
+    }
+    y_label = y_label_map.get(selected_metric, selected_metric)
+    plot_title = f"{selected_metric} in {selected_state} - {selected_sector}"
+    
+    fig, ax = plt.subplots(figsize=(12, 7))
 
-        # Create the plot using Matplotlib
-        fig, ax = plt.subplots(figsize=(12, 6))
-
-        # Plot the data series
-        ax.plot(plot_df["Year"], plot_df["ENOW_value"], 'o-r', label="ENOW")
-        ax.plot(plot_df["Year"], plot_df["QCEW_w_imputation"], 's-b', label="Estimate: public QCEW data with imputed values")
-        ax.plot(plot_df["Year"], plot_df["NPStates_est"], '^-g', label="Estimate: public QCEW, no imputation")
-
-        # Formatting the plot
-        ax.set_xlabel("Year")
-        ax.set_ylabel(y_label)
-        ax.set_title(f"{selected_metric} Comparison for {selected_state} - {selected_sector}", fontsize=14)
-        ax.grid(axis='y', linestyle='--', alpha=0.7)
-        ax.legend(loc="best")
-
-        # Format y-axis labels with commas and/or dollar signs
-        ax.get_yaxis().set_major_formatter(
-            plt.FuncFormatter(lambda x, p: format_value(x, selected_metric))
-        )
-        plt.xticks(plot_df["Year"].unique(), rotation=45)
-        fig.tight_layout()
-
-        # Display the plot in Streamlit
-        st.pyplot(fig)
-    else:
-        st.warning("No data available for the selected filters. Please adjust your selections.")
-
-
-    # --- Summary Statistics ---
-    st.subheader("Summary Statistics")
-    summary_df = plot_df.dropna()
-
-    if not summary_df.empty:
-        # Calculate differences and percentage differences
-        diff_nq = summary_df["QCEW_w_imputation"] - summary_df["ENOW_value"]
-        pct_diff_nq = 100 * diff_nq / summary_df["ENOW_value"]
-
-        diff_np = summary_df["NPStates_est"] - summary_df["ENOW_value"]
-        pct_diff_np = 100 * diff_np / summary_df["ENOW_value"]
+    # --- Plot Mode: Compare to ENOW ---
+    if plot_mode == "Compare to ENOW":
+        # Aggregate data if 'All' is selected
+        if selected_state == "All States" or selected_sector == "All Sectors":
+            compare_df = plot_df.groupby("Year")[["ENOW_value", "Estimate_value"]].sum().reset_index()
+        else:
+            compare_df = plot_df
         
-        # Replace infinite values with NaN for proper calculation
-        pct_diff_nq.replace([np.inf, -np.inf], np.nan, inplace=True)
-        pct_diff_np.replace([np.inf, -np.inf], np.nan, inplace=True)
+        compare_df.dropna(subset=["ENOW_value", "Estimate_value"], inplace=True)
 
-        # Create the summary text
-        summary_text = f"""
-        Public QCEW with imputed values vs ENOW:
-          - Mean Difference: {format_value(diff_nq.mean(), selected_metric)}
-          - Median Difference: {format_value(diff_nq.median(), selected_metric)}
-          - Mean Percent Difference: {pct_diff_nq.mean():.2f}%
+        if not compare_df.empty:
+            ax.plot(compare_df["Year"], compare_df["ENOW_value"], 'o-', color="#D55E00", label="ENOW")
+            ax.plot(compare_df["Year"], compare_df["Estimate_value"], 's-', color="#0072B2", label="Estimate from public QCEW")
+            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False)
+            
+            # --- Summary Statistics ---
+            diff = compare_df["Estimate_value"] - compare_df["ENOW_value"]
+            pct_diff = 100 * diff / compare_df["ENOW_value"]
+            pct_diff.replace([np.inf, -np.inf], np.nan, inplace=True)
+            
+            summary_text = f"""
+            Mean Difference: {format_value(diff.mean(), selected_metric)}
+            Median Difference: {format_value(diff.median(), selected_metric)}
+            Mean Percent Difference: {pct_diff.mean():.2f}%
+            """
+            st.subheader("Summary Statistics")
+            st.code(summary_text, language='text')
 
-        Non-Participating States method (no imputation) vs ENOW:
-          - Mean Difference: {format_value(diff_np.mean(), selected_metric)}
-          - Median Difference: {format_value(diff_np.median(), selected_metric)}
-          - Mean Percent Difference: {pct_diff_np.mean():.2f}%
-        """
-        st.code(summary_text, language='text')
+        else:
+            st.warning("No overlapping data available to compare for the selected filters.")
+
+    # --- Plot Mode: Show Estimates for All Years ---
     else:
-        st.warning("Cannot calculate summary statistics because there is no overlapping data for the selected filters.")
+        # Stacked bar chart for "All Sectors"
+        if selected_sector == "All Sectors":
+            if selected_state == "All States":
+                agg_df = plot_df.groupby(["Year", "OceanSector"])["Estimate_value"].sum().unstack()
+            else:
+                agg_df = plot_df.groupby(["Year", "OceanSector"])["Estimate_value"].sum().unstack()
 
+            if not agg_df.empty:
+                colors = get_sector_colors(len(agg_df.columns))
+                agg_df.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.8)
+                
+                # Wrap legend labels
+                wrapped_labels = ['\n'.join(wrap(l, 20)) for l in agg_df.columns]
+                ax.legend(wrapped_labels, title="Sectors", bbox_to_anchor=(1.04, 1), loc="upper left")
+                fig.tight_layout(rect=[0, 0, 0.85, 1]) # Adjust layout to make space for legend
+            else:
+                 st.warning("No data available for the selected filters.")
+
+        # Simple bar chart for a single sector
+        else:
+            if selected_state == "All States":
+                bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
+            else:
+                bar_df = plot_df
+                
+            if not bar_df.empty:
+                ax.bar(bar_df["Year"], bar_df["Estimate_value"], color="#0072B2", label="Estimate from public QCEW")
+                ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), frameon=False)
+            else:
+                st.warning("No data available for the selected filters.")
+
+
+    # --- Common Plot Formatting ---
+    if plot_mode == "Compare to ENOW" or selected_sector != "All Sectors":
+        ax.set_xticks(np.arange(year_range[0], year_range[1] + 1))
+        plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
+
+    ax.set_xlabel("Year", fontsize=12)
+    ax.set_ylabel(y_label, fontsize=12)
+    ax.set_title(plot_title, fontsize=16)
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Format y-axis to have commas
+    ax.get_yaxis().set_major_formatter(mticker.FuncFormatter(lambda x, p: format(int(x), ',')))
+
+    st.pyplot(fig)
