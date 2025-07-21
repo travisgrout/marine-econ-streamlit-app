@@ -160,19 +160,30 @@ if dorado_results is not None:
         nq_metric_col = f"NQ_{selected_metric}"
 
         plot_df = base_filtered_df[["Year", "OceanSector", enow_metric_col, nq_metric_col]].copy()
-        plot_df.rename(columns={enow_metric_col: "ENOW_value", nq_metric_col: "Estimate_value"}, inplace=True)
+        plot_df.rename(columns={
+            enow_metric_col: "ENOW_value",
+            nq_metric_col: "Estimate_value"
+        }, inplace=True)
         
         if selected_metric in ["GDP", "RealGDP", "Wages"]:
             plot_df[["ENOW_value", "Estimate_value"]] = plot_df[["ENOW_value", "Estimate_value"]].div(1e6)
 
-        compare_df = plot_df.groupby("Year")[["ENOW_value", "Estimate_value"]].sum().reset_index()
+        # This ensures that summing all NA values results in NA, not 0.
+        compare_df = plot_df.groupby("Year")[["ENOW_value", "Estimate_value"]].sum(min_count=1).reset_index()
+        
+        # This dropna() will remove years with no data
         compare_df.dropna(subset=["ENOW_value", "Estimate_value"], inplace=True)
 
         if not compare_df.empty:
-            ax.plot(compare_df["Year"], compare_df["ENOW_value"], 'o-', color="#D55E00", label="ENOW")
-            ax.plot(compare_df["Year"], compare_df["Estimate_value"], 's-', color="#0072B2", label="Estimate from public QCEW")
+            ax.plot(compare_df["Year"], compare_df["ENOW_value"], 'o-', color="#D55E00", label="ENOW", markersize=8)
+            ax.plot(compare_df["Year"], compare_df["Estimate_value"], 's-', color="#0072B2", label="Estimate from public QCEW", markersize=8)
+            
             ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False)
             
+            # Set the y-axis to start at 0 
+            ax.set_ylim(bottom=0)
+            
+            # --- Summary Statistics ---
             diff = compare_df["Estimate_value"] - compare_df["ENOW_value"]
             pct_diff = (100 * diff / compare_df["ENOW_value"]).replace([np.inf, -np.inf], np.nan)
             
