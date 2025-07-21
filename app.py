@@ -112,7 +112,7 @@ if dorado_results is not None:
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
-    st.subheader("Estimates Plot")
+    st.subheader("{selected_state} - {selected_sector}")
     y_label_map = {
         "GDP": "GDP ($ millions)",
         "RealGDP": "Real GDP ($ millions)",
