@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import altair as alt # ### MODIFICATION ###
+import altair as alt
 from textwrap import wrap
 
 # --- Page Configuration ---
@@ -139,10 +139,6 @@ if dorado_results is not None:
     y_label = y_label_map.get(selected_display_metric, selected_display_metric)
     plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
     
-    # ### MODIFICATION ###
-    # This entire section is refactored to use Altair for interactive charts.
-    
-    # Determine the tooltip format based on the metric
     is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
     tooltip_format = '$,.0f' if is_currency else ',.0f'
 
@@ -171,9 +167,15 @@ if dorado_results is not None:
                         alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    title=plot_title
+                    # ### MODIFICATION ###
+                    title=plot_title,
+                    height=500  # Set the chart height in pixels
+                ).configure_axis(
+                    # ### MODIFICATION ###
+                    labelFontSize=14,  # Font size for axis labels (e.g., years)
+                    titleFontSize=16   # Font size for axis titles (e.g., "Year", "GDP ($ millions)")
                 ).configure_legend(
-                    symbolLimit=len(sorted_sector_names) # Ensure all sectors appear in legend
+                    symbolLimit=len(sorted_sector_names)
                 )
                 st.altair_chart(chart, use_container_width=True)
             else:
@@ -191,7 +193,13 @@ if dorado_results is not None:
                         alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    title=plot_title
+                    # ### MODIFICATION ###
+                    title=plot_title,
+                    height=500  # Set the chart height in pixels
+                ).configure_axis(
+                    # ### MODIFICATION ###
+                    labelFontSize=14,  # Font size for axis labels
+                    titleFontSize=16   # Font size for axis titles
                 )
                 st.altair_chart(chart, use_container_width=True)
             else:
@@ -214,7 +222,6 @@ if dorado_results is not None:
         compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
         compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"], how='all', inplace=True)
         
-        # Melt dataframe to long format for Altair
         long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
 
         if not long_form_df.empty:
@@ -235,13 +242,18 @@ if dorado_results is not None:
             points = base.mark_point(size=80, filled=True)
             
             chart = (line + points).properties(
-                title=plot_title
-            ).interactive() # .interactive() enables zoom and pan
+                # ### MODIFICATION ###
+                title=plot_title,
+                height=500 # Set the chart height in pixels
+            ).configure_axis(
+                # ### MODIFICATION ###
+                labelFontSize=14, # Font size for axis labels
+                titleFontSize=16  # Font size for axis titles
+            ).interactive()
 
             st.altair_chart(chart, use_container_width=True)
 
             # --- Summary Statistics ---
-            # Use original compare_df for calculations
             diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
             pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
             
