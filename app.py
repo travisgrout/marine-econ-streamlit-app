@@ -109,11 +109,24 @@ if dorado_results is not None:
     selected_metric_internal = METRIC_MAP[selected_display_metric]
 
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
+    
+    # ### MODIFICATION ###
+    # Set the default year range based on the selected plot mode.
+    # This logic also ensures the default values are within the dataset's actual range.
+    if plot_mode == "Estimates from Public QCEW Data":
+        default_start_year = max(min_year, 2014)
+        default_end_year = min(max_year, 2023)
+        default_range = (default_start_year, default_end_year)
+    else:  # "Compare to ENOW"
+        default_start_year = max(min_year, 2012)
+        default_end_year = min(max_year, 2021)
+        default_range = (default_start_year, default_end_year)
+        
     year_range = st.sidebar.slider(
         "Select Year Range:",
         min_value=min_year,
         max_value=max_year,
-        value=(min_year, max_year),
+        value=default_range,  # Use the dynamic default_range variable here
         step=1
     )
 
@@ -167,13 +180,11 @@ if dorado_results is not None:
                         alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    # ### MODIFICATION ###
                     title=plot_title,
-                    height=500  # Set the chart height in pixels
+                    height=500
                 ).configure_axis(
-                    # ### MODIFICATION ###
-                    labelFontSize=14,  # Font size for axis labels (e.g., years)
-                    titleFontSize=16   # Font size for axis titles (e.g., "Year", "GDP ($ millions)")
+                    labelFontSize=14,
+                    titleFontSize=16
                 ).configure_legend(
                     symbolLimit=len(sorted_sector_names)
                 )
@@ -193,13 +204,11 @@ if dorado_results is not None:
                         alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    # ### MODIFICATION ###
                     title=plot_title,
-                    height=500  # Set the chart height in pixels
+                    height=500
                 ).configure_axis(
-                    # ### MODIFICATION ###
-                    labelFontSize=14,  # Font size for axis labels
-                    titleFontSize=16   # Font size for axis titles
+                    labelFontSize=14,
+                    titleFontSize=16
                 )
                 st.altair_chart(chart, use_container_width=True)
             else:
@@ -242,13 +251,11 @@ if dorado_results is not None:
             points = base.mark_point(size=80, filled=True)
             
             chart = (line + points).properties(
-                # ### MODIFICATION ###
                 title=plot_title,
-                height=500 # Set the chart height in pixels
+                height=500
             ).configure_axis(
-                # ### MODIFICATION ###
-                labelFontSize=14, # Font size for axis labels
-                titleFontSize=16  # Font size for axis titles
+                labelFontSize=14,
+                titleFontSize=16
             ).interactive()
 
             st.altair_chart(chart, use_container_width=True)
