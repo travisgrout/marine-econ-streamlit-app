@@ -54,8 +54,6 @@ def format_value(x, metric):
     """Formats numbers with commas and appropriate currency symbols."""
     if pd.isna(x):
         return "N/A"
-    # ### MODIFICATION ###
-    # Updated the metric names in the check
     if metric in ["Wages (not inflation-adjusted)", "Real Wages", "GDP (nominal)", "Real GDP"]:
         return f"${x:,.0f}"
     else:
@@ -74,8 +72,6 @@ def get_sector_colors(n):
 if dorado_results is not None:
     st.title("Marine Economy estimates: states and sectors")
 
-    # ### MODIFICATION ###
-    # Dictionary to map user-facing metric names to internal data names.
     METRIC_MAP = {
         "Employment": "Employment",
         "Wages (not inflation-adjusted)": "Wages",
@@ -98,23 +94,23 @@ if dorado_results is not None:
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
     unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
 
-    # Conditionally set the metric choices based on the selected plot_mode.
+    # ### MODIFICATION ###
+    # Create a consistent color mapping for all sectors. This ensures that a sector's
+    # color is the same in both the stacked "All Sectors" chart and a single-sector chart.
+    sorted_sector_names = sorted(ocean_sectors)
+    colors_list = get_sector_colors(len(sorted_sector_names))
+    sector_color_map = dict(zip(sorted_sector_names, colors_list))
+
+
     if plot_mode == "Estimates from Public QCEW Data":
         metric_choices = list(METRIC_MAP.keys())
     else:
-        # Create a new dictionary for compare mode that excludes "Real Wages"
         compare_metrics = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
         metric_choices = list(compare_metrics.keys())
 
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
     selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
-    
-    # ### MODIFICATION ###
-    # The selected metric is now the user-facing display name
     selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
-    
-    # ### MODIFICATION ###
-    # We map the display name back to the internal name for data processing
     selected_metric_internal = METRIC_MAP[selected_display_metric]
 
 
@@ -138,9 +134,6 @@ if dorado_results is not None:
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
-    
-    # ### MODIFICATION ###
-    # y_label_map now uses the new display names as keys.
     y_label_map = {
         "GDP (nominal)": "GDP ($ millions)",
         "Real GDP": "Real GDP (millions of 2017 USD)",
@@ -156,39 +149,43 @@ if dorado_results is not None:
 
     # --- Mode 1: Estimates from Public QCEW Data ---
     if plot_mode == "Estimates from Public QCEW Data":
-        # We use the internal metric name for constructing the column name
         nq_metric_col = f"NQ_{selected_metric_internal}"
         
         plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
         plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
         
-        # ### MODIFICATION ###
-        # Check now uses the new display names
         if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]:
             plot_df["Estimate_value"] /= 1e6
 
         if selected_sector == "All Sectors":
             agg_df = plot_df.groupby(["Year", "OceanSector"])["Estimate_value"].sum().unstack()
             if not agg_df.empty:
-                colors = get_sector_colors(len(agg_df.columns))
-                agg_df.plot(kind='bar', stacked=True, ax=ax, color=colors, width=0.8)
+                # ### MODIFICATION ###
+                # Use the predefined color map to ensure colors are consistent.
+                # The order of columns in agg_df is alphabetical, matching our sorted map.
+                plot_colors = [sector_color_map.get(col, "#333333") for col in agg_df.columns]
+                agg_df.plot(kind='bar', stacked=True, ax=ax, color=plot_colors, width=0.8)
+                
                 wrapped_labels = ['\n'.join(wrap(l, 20)) for l in agg_df.columns]
                 ax.legend(wrapped_labels, title="Sectors", bbox_to_anchor=(1.04, 1), loc="upper left")
                 fig.tight_layout(rect=[0, 0, 0.85, 1])
             else:
                 st.warning("No data available for the selected filters.")
-        else:
+        else: # This block handles the single-sector chart
             bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index() if selected_state == "All Coastal States" else plot_df
             if not bar_df.empty:
-                ax.bar(bar_df["Year"], bar_df["Estimate_value"], color="#0072B2", label="Estimate from public QCEW")
+                # ### MODIFICATION ###
+                # Get the specific color for the selected sector from our map.
+                # Use a default color of gray if the sector isn't in the map for some reason.
+                sector_color = sector_color_map.get(selected_sector, "#808080")
+                ax.bar(bar_df["Year"], bar_df["Estimate_value"], color=sector_color, label="Estimate from public QCEW")
                 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), frameon=False)
             else:
                 st.warning("No data available for the selected filters.")
 
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
-        # We use the internal metric name for data selection
         enow_metric_col = selected_metric_internal
         nq_metric_col = f"NQ_{selected_metric_internal}"
 
@@ -198,8 +195,6 @@ if dorado_results is not None:
             nq_metric_col: "Estimate_value"
         }, inplace=True)
         
-        # ### MODIFICATION ###
-        # Check now uses the new display names
         if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)"]:
             plot_df[["ENOW_value", "Estimate_value"]] = plot_df[["ENOW_value", "Estimate_value"]].div(1e6)
 
