@@ -110,7 +110,6 @@ if dorado_results is not None:
 
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     
-    # ### MODIFICATION ###
     # Set the default year range based on the selected plot mode.
     # This logic also ensures the default values are within the dataset's actual range.
     if plot_mode == "Estimates from Public QCEW Data":
