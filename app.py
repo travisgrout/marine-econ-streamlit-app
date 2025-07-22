@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+import altair as alt # ### MODIFICATION ###
 from textwrap import wrap
 
 # --- Page Configuration ---
@@ -30,7 +29,6 @@ def load_data():
         }
         df.rename(columns=rename_dict, inplace=True)
         
-        # --- ROBUSTNESS FIX ---
         # Explicitly convert all potential metric columns to numeric types.
         metric_cols_to_convert = [
             'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP',
@@ -66,7 +64,8 @@ def get_sector_colors(n):
         "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9",
         "#009E73", "#F0E442"
     ]
-    return base_colors[:n] if n <= len(base_colors) else plt.cm.viridis(np.linspace(0, 1, n))
+    return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
+
 
 # --- Main Application ---
 if dorado_results is not None:
@@ -93,14 +92,10 @@ if dorado_results is not None:
 
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
     unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
-
-    # ### MODIFICATION ###
-    # Create a consistent color mapping for all sectors. This ensures that a sector's
-    # color is the same in both the stacked "All Sectors" chart and a single-sector chart.
+    
     sorted_sector_names = sorted(ocean_sectors)
     colors_list = get_sector_colors(len(sorted_sector_names))
     sector_color_map = dict(zip(sorted_sector_names, colors_list))
-
 
     if plot_mode == "Estimates from Public QCEW Data":
         metric_choices = list(METRIC_MAP.keys())
@@ -113,7 +108,6 @@ if dorado_results is not None:
     selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
     selected_metric_internal = METRIC_MAP[selected_display_metric]
 
-
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     year_range = st.sidebar.slider(
         "Select Year Range:",
@@ -123,7 +117,7 @@ if dorado_results is not None:
         step=1
     )
 
-    # --- Base Data Filtering (applied to both modes) ---
+    # --- Base Data Filtering ---
     base_filtered_df = dorado_results[
         (dorado_results["Year"] >= year_range[0]) &
         (dorado_results["Year"] <= year_range[1])
@@ -145,7 +139,12 @@ if dorado_results is not None:
     y_label = y_label_map.get(selected_display_metric, selected_display_metric)
     plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
     
-    fig, ax = plt.subplots(figsize=(12, 7))
+    # ### MODIFICATION ###
+    # This entire section is refactored to use Altair for interactive charts.
+    
+    # Determine the tooltip format based on the metric
+    is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
+    tooltip_format = '$,.0f' if is_currency else ',.0f'
 
     # --- Mode 1: Estimates from Public QCEW Data ---
     if plot_mode == "Estimates from Public QCEW Data":
@@ -155,32 +154,46 @@ if dorado_results is not None:
         plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
         
-        if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]:
+        if is_currency:
             plot_df["Estimate_value"] /= 1e6
 
         if selected_sector == "All Sectors":
-            agg_df = plot_df.groupby(["Year", "OceanSector"])["Estimate_value"].sum().unstack()
-            if not agg_df.empty:
-                # ### MODIFICATION ###
-                # Use the predefined color map to ensure colors are consistent.
-                # The order of columns in agg_df is alphabetical, matching our sorted map.
-                plot_colors = [sector_color_map.get(col, "#333333") for col in agg_df.columns]
-                agg_df.plot(kind='bar', stacked=True, ax=ax, color=plot_colors, width=0.8)
-                
-                wrapped_labels = ['\n'.join(wrap(l, 20)) for l in agg_df.columns]
-                ax.legend(wrapped_labels, title="Sectors", bbox_to_anchor=(1.04, 1), loc="upper left")
-                fig.tight_layout(rect=[0, 0, 0.85, 1])
+            if not plot_df.empty:
+                chart = alt.Chart(plot_df).mark_bar().encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('sum(Estimate_value):Q', title=y_label),
+                    color=alt.Color('OceanSector:N', 
+                                  scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
+                                  legend=alt.Legend(title="Sectors")),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('OceanSector:N', title='Sector'),
+                        alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).properties(
+                    title=plot_title
+                ).configure_legend(
+                    symbolLimit=len(sorted_sector_names) # Ensure all sectors appear in legend
+                )
+                st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
-        else: # This block handles the single-sector chart
-            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index() if selected_state == "All Coastal States" else plot_df
+
+        else: # Single-sector chart
+            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
             if not bar_df.empty:
-                # ### MODIFICATION ###
-                # Get the specific color for the selected sector from our map.
-                # Use a default color of gray if the sector isn't in the map for some reason.
                 sector_color = sector_color_map.get(selected_sector, "#808080")
-                ax.bar(bar_df["Year"], bar_df["Estimate_value"], color=sector_color, label="Estimate from public QCEW")
-                ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), frameon=False)
+                chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('Estimate_value:Q', title=y_label),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).properties(
+                    title=plot_title
+                )
+                st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
 
@@ -189,27 +202,48 @@ if dorado_results is not None:
         enow_metric_col = selected_metric_internal
         nq_metric_col = f"NQ_{selected_metric_internal}"
 
-        plot_df = base_filtered_df[["Year", "OceanSector", enow_metric_col, nq_metric_col]].copy()
+        plot_df = base_filtered_df[["Year", enow_metric_col, nq_metric_col]].copy()
         plot_df.rename(columns={
-            enow_metric_col: "ENOW_value",
-            nq_metric_col: "Estimate_value"
+            enow_metric_col: "ENOW",
+            nq_metric_col: "Estimate from public QCEW"
         }, inplace=True)
         
-        if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)"]:
-            plot_df[["ENOW_value", "Estimate_value"]] = plot_df[["ENOW_value", "Estimate_value"]].div(1e6)
+        if is_currency:
+            plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
 
-        compare_df = plot_df.groupby("Year")[["ENOW_value", "Estimate_value"]].sum(min_count=1).reset_index()
-        compare_df.dropna(subset=["ENOW_value", "Estimate_value"], inplace=True)
+        compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
+        compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"], how='all', inplace=True)
+        
+        # Melt dataframe to long format for Altair
+        long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
 
-        if not compare_df.empty:
-            ax.plot(compare_df["Year"], compare_df["ENOW_value"], 'o-', color="#D55E00", label="ENOW", markersize=8)
-            ax.plot(compare_df["Year"], compare_df["Estimate_value"], 's-', color="#0072B2", label="Estimate from public QCEW", markersize=8)
-            ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False)
-            ax.set_ylim(bottom=0)
+        if not long_form_df.empty:
+            base = alt.Chart(long_form_df).encode(
+                x=alt.X('Year:O', title='Year'),
+                y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+                color=alt.Color('Source:N', 
+                              scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
+                              legend=alt.Legend(title="Data Source", orient="bottom")),
+                tooltip=[
+                    alt.Tooltip('Year:O', title='Year'),
+                    alt.Tooltip('Source:N', title='Source'),
+                    alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)
+                ]
+            )
             
+            line = base.mark_line()
+            points = base.mark_point(size=80, filled=True)
+            
+            chart = (line + points).properties(
+                title=plot_title
+            ).interactive() # .interactive() enables zoom and pan
+
+            st.altair_chart(chart, use_container_width=True)
+
             # --- Summary Statistics ---
-            diff = compare_df["Estimate_value"] - compare_df["ENOW_value"]
-            pct_diff = (100 * diff / compare_df["ENOW_value"]).replace([np.inf, -np.inf], np.nan)
+            # Use original compare_df for calculations
+            diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
+            pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
             
             summary_text = f"""
             Mean Difference: {format_value(diff.mean(), selected_display_metric)}
@@ -220,19 +254,3 @@ if dorado_results is not None:
             st.code(summary_text, language='text')
         else:
             st.warning("No overlapping data available to compare for the selected filters.")
-
-    # --- Common Plot Formatting ---
-    ax.set_xlabel("Year", fontsize=12)
-    ax.set_ylabel(y_label, fontsize=12)
-    ax.set_title('\n'.join(wrap(plot_title, 60)), fontsize=16)
-    ax.grid(axis='y', linestyle='--', alpha=0.7)
-    ax.get_yaxis().set_major_formatter(mticker.FuncFormatter(lambda x, p: format(int(x), ',')))
-
-    if plot_mode == "Compare to ENOW" or selected_sector != "All Sectors":
-        years_df = compare_df if plot_mode == "Compare to ENOW" else bar_df
-        all_years = sorted(years_df["Year"].unique())
-        if all_years:
-            ax.set_xticks(all_years)
-            plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
-
-    st.pyplot(fig)
