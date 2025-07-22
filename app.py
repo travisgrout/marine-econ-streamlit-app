@@ -21,8 +21,7 @@ def load_data():
     try:
         df = pd.read_csv("DORADO_combined_sectors.csv")
         
-        # ### MODIFICATION ###
-        # Renamed NQ_rw to NQ_RealWages for clarity and consistency
+        # Rename columns for consistency
         rename_dict = {
             "NQ_establishments": "NQ_Establishments",
             "NQ_employment": "NQ_Employment",
@@ -33,10 +32,6 @@ def load_data():
         
         # --- ROBUSTNESS FIX ---
         # Explicitly convert all potential metric columns to numeric types.
-        # errors='coerce' will turn any values that can't be converted into NaN.
-        
-        # ### MODIFICATION ###
-        # Added 'NQ_RealWages' to the list of columns to convert to numeric
         metric_cols_to_convert = [
             'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP',
             'Establishments', 'Employment', 'Wages', 'GDP', 'RealGDP'
@@ -60,8 +55,8 @@ def format_value(x, metric):
     if pd.isna(x):
         return "N/A"
     # ### MODIFICATION ###
-    # Added "RealWages" to the list of metrics formatted as currency
-    if metric in ["Wages", "RealWages", "GDP", "RealGDP"]:
+    # Updated the metric names in the check
+    if metric in ["Wages (not inflation-adjusted)", "Real Wages", "GDP (nominal)", "Real GDP"]:
         return f"${x:,.0f}"
     else:
         return f"{x:,.0f}"
@@ -79,7 +74,17 @@ def get_sector_colors(n):
 if dorado_results is not None:
     st.title("Marine Economy estimates: states and sectors")
 
-    # --- Sidebar for User Inputs ---
+    # ### MODIFICATION ###
+    # Dictionary to map user-facing metric names to internal data names.
+    METRIC_MAP = {
+        "Employment": "Employment",
+        "Wages (not inflation-adjusted)": "Wages",
+        "Real Wages": "RealWages",
+        "Establishments": "Establishments",
+        "GDP (nominal)": "GDP",
+        "Real GDP": "RealGDP"
+    }
+
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
         "Display Mode:",
@@ -93,17 +98,25 @@ if dorado_results is not None:
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
     unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
 
-    # ### MODIFICATION ###
     # Conditionally set the metric choices based on the selected plot_mode.
-    # "Real Wages" is only available for the "Estimates" mode.
     if plot_mode == "Estimates from Public QCEW Data":
-        metric_choices = ["Employment", "Wages", "Real Wages", "Establishments", "GDP", "RealGDP"]
+        metric_choices = list(METRIC_MAP.keys())
     else:
-        metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
+        # Create a new dictionary for compare mode that excludes "Real Wages"
+        compare_metrics = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
+        metric_choices = list(compare_metrics.keys())
 
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
     selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
-    selected_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+    
+    # ### MODIFICATION ###
+    # The selected metric is now the user-facing display name
+    selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+    
+    # ### MODIFICATION ###
+    # We map the display name back to the internal name for data processing
+    selected_metric_internal = METRIC_MAP[selected_display_metric]
+
 
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     year_range = st.sidebar.slider(
@@ -127,34 +140,32 @@ if dorado_results is not None:
     # --- Plotting and Visualization ---
     
     # ### MODIFICATION ###
-    # Added a label for "Real Wages" to the y-axis map
+    # y_label_map now uses the new display names as keys.
     y_label_map = {
-        "GDP": "GDP ($ millions)",
-        "RealGDP": "Real GDP (millions of 2017 USD)",
-        "Wages": "Wages ($ millions)",
+        "GDP (nominal)": "GDP ($ millions)",
+        "Real GDP": "Real GDP (millions of 2017 USD)",
+        "Wages (not inflation-adjusted)": "Wages ($ millions)",
         "Real Wages": "Real Wages ($ millions, 2017)",
         "Employment": "Employment (Number of Jobs)",
         "Establishments": "Establishments (Count)"
     }
-    y_label = y_label_map.get(selected_metric, selected_metric)
-    plot_title = f"Marine Economy {selected_metric} in {selected_state} - {selected_sector} Sector"
+    y_label = y_label_map.get(selected_display_metric, selected_display_metric)
+    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
     
     fig, ax = plt.subplots(figsize=(12, 7))
 
     # --- Mode 1: Estimates from Public QCEW Data ---
     if plot_mode == "Estimates from Public QCEW Data":
-        # ### MODIFICATION ###
-        # Replaces the space in 'Real Wages' to match the column name 'NQ_RealWages'
-        internal_metric_name = selected_metric.replace(" ", "") 
-        nq_metric_col = f"NQ_{internal_metric_name}"
+        # We use the internal metric name for constructing the column name
+        nq_metric_col = f"NQ_{selected_metric_internal}"
         
         plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
         plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
         
         # ### MODIFICATION ###
-        # Added "Real Wages" to the list of metrics that are scaled down by 1 million
-        if selected_metric in ["GDP", "RealGDP", "Wages", "Real Wages"]:
+        # Check now uses the new display names
+        if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]:
             plot_df["Estimate_value"] /= 1e6
 
         if selected_sector == "All Sectors":
@@ -177,8 +188,9 @@ if dorado_results is not None:
 
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
-        enow_metric_col = selected_metric
-        nq_metric_col = f"NQ_{selected_metric}"
+        # We use the internal metric name for data selection
+        enow_metric_col = selected_metric_internal
+        nq_metric_col = f"NQ_{selected_metric_internal}"
 
         plot_df = base_filtered_df[["Year", "OceanSector", enow_metric_col, nq_metric_col]].copy()
         plot_df.rename(columns={
@@ -186,22 +198,18 @@ if dorado_results is not None:
             nq_metric_col: "Estimate_value"
         }, inplace=True)
         
-        if selected_metric in ["GDP", "RealGDP", "Wages"]:
+        # ### MODIFICATION ###
+        # Check now uses the new display names
+        if selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)"]:
             plot_df[["ENOW_value", "Estimate_value"]] = plot_df[["ENOW_value", "Estimate_value"]].div(1e6)
 
-        # This ensures that summing all NA values results in NA, not 0.
         compare_df = plot_df.groupby("Year")[["ENOW_value", "Estimate_value"]].sum(min_count=1).reset_index()
-        
-        # This dropna() will remove years with no data
         compare_df.dropna(subset=["ENOW_value", "Estimate_value"], inplace=True)
 
         if not compare_df.empty:
             ax.plot(compare_df["Year"], compare_df["ENOW_value"], 'o-', color="#D55E00", label="ENOW", markersize=8)
             ax.plot(compare_df["Year"], compare_df["Estimate_value"], 's-', color="#0072B2", label="Estimate from public QCEW", markersize=8)
-            
             ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=2, frameon=False)
-            
-            # Set the y-axis to start at 0 
             ax.set_ylim(bottom=0)
             
             # --- Summary Statistics ---
@@ -209,8 +217,8 @@ if dorado_results is not None:
             pct_diff = (100 * diff / compare_df["ENOW_value"]).replace([np.inf, -np.inf], np.nan)
             
             summary_text = f"""
-            Mean Difference: {format_value(diff.mean(), selected_metric)}
-            Median Difference: {format_value(diff.median(), selected_metric)}
+            Mean Difference: {format_value(diff.mean(), selected_display_metric)}
+            Median Difference: {format_value(diff.median(), selected_display_metric)}
             Mean Percent Difference: {pct_diff.mean():.2f}%
             """
             st.subheader("Summary Statistics")
@@ -225,9 +233,7 @@ if dorado_results is not None:
     ax.grid(axis='y', linestyle='--', alpha=0.7)
     ax.get_yaxis().set_major_formatter(mticker.FuncFormatter(lambda x, p: format(int(x), ',')))
 
-    # Set integer ticks on the x-axis for line and simple bar charts
     if plot_mode == "Compare to ENOW" or selected_sector != "All Sectors":
-        # Use a consistent DataFrame for getting year ticks
         years_df = compare_df if plot_mode == "Compare to ENOW" else bar_df
         all_years = sorted(years_df["Year"].unique())
         if all_years:
