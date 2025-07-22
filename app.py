@@ -21,19 +21,24 @@ def load_data():
     try:
         df = pd.read_csv("DORADO_combined_sectors.csv")
         
-        # Rename columns for consistency
+        # ### MODIFICATION ###
+        # Renamed NQ_rw to NQ_RealWages for clarity and consistency
         rename_dict = {
             "NQ_establishments": "NQ_Establishments",
             "NQ_employment": "NQ_Employment",
             "NQ_wages": "NQ_Wages",
+            "NQ_rw": "NQ_RealWages", 
         }
         df.rename(columns=rename_dict, inplace=True)
         
         # --- ROBUSTNESS FIX ---
         # Explicitly convert all potential metric columns to numeric types.
         # errors='coerce' will turn any values that can't be converted into NaN.
+        
+        # ### MODIFICATION ###
+        # Added 'NQ_RealWages' to the list of columns to convert to numeric
         metric_cols_to_convert = [
-            'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_GDP', 'NQ_RealGDP',
+            'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP',
             'Establishments', 'Employment', 'Wages', 'GDP', 'RealGDP'
         ]
         
@@ -54,7 +59,9 @@ def format_value(x, metric):
     """Formats numbers with commas and appropriate currency symbols."""
     if pd.isna(x):
         return "N/A"
-    if metric in ["Wages", "GDP", "RealGDP"]:
+    # ### MODIFICATION ###
+    # Added "RealWages" to the list of metrics formatted as currency
+    if metric in ["Wages", "RealWages", "GDP", "RealGDP"]:
         return f"${x:,.0f}"
     else:
         return f"{x:,.0f}"
@@ -86,7 +93,13 @@ if dorado_results is not None:
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
     unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
 
-    metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
+    # ### MODIFICATION ###
+    # Conditionally set the metric choices based on the selected plot_mode.
+    # "Real Wages" is only available for the "Estimates" mode.
+    if plot_mode == "Estimates from Public QCEW Data":
+        metric_choices = ["Employment", "Wages", "Real Wages", "Establishments", "GDP", "RealGDP"]
+    else:
+        metric_choices = ["Employment", "Wages", "Establishments", "GDP", "RealGDP"]
 
     selected_state = st.sidebar.selectbox("Select State:", unique_states)
     selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
@@ -112,10 +125,14 @@ if dorado_results is not None:
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
+    
+    # ### MODIFICATION ###
+    # Added a label for "Real Wages" to the y-axis map
     y_label_map = {
         "GDP": "GDP ($ millions)",
         "RealGDP": "Real GDP (millions of 2017 USD)",
         "Wages": "Wages ($ millions)",
+        "Real Wages": "Real Wages ($ millions, 2017)",
         "Employment": "Employment (Number of Jobs)",
         "Establishments": "Establishments (Count)"
     }
@@ -126,13 +143,18 @@ if dorado_results is not None:
 
     # --- Mode 1: Estimates from Public QCEW Data ---
     if plot_mode == "Estimates from Public QCEW Data":
-        nq_metric_col = f"NQ_{selected_metric}"
+        # ### MODIFICATION ###
+        # Replaces the space in 'Real Wages' to match the column name 'NQ_RealWages'
+        internal_metric_name = selected_metric.replace(" ", "") 
+        nq_metric_col = f"NQ_{internal_metric_name}"
         
         plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
         plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
         
-        if selected_metric in ["GDP", "RealGDP", "Wages"]:
+        # ### MODIFICATION ###
+        # Added "Real Wages" to the list of metrics that are scaled down by 1 million
+        if selected_metric in ["GDP", "RealGDP", "Wages", "Real Wages"]:
             plot_df["Estimate_value"] /= 1e6
 
         if selected_sector == "All Sectors":
@@ -144,7 +166,7 @@ if dorado_results is not None:
                 ax.legend(wrapped_labels, title="Sectors", bbox_to_anchor=(1.04, 1), loc="upper left")
                 fig.tight_layout(rect=[0, 0, 0.85, 1])
             else:
-                 st.warning("No data available for the selected filters.")
+                st.warning("No data available for the selected filters.")
         else:
             bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index() if selected_state == "All Coastal States" else plot_df
             if not bar_df.empty:
@@ -205,7 +227,9 @@ if dorado_results is not None:
 
     # Set integer ticks on the x-axis for line and simple bar charts
     if plot_mode == "Compare to ENOW" or selected_sector != "All Sectors":
-        all_years = sorted(plot_df["Year"].unique())
+        # Use a consistent DataFrame for getting year ticks
+        years_df = compare_df if plot_mode == "Compare to ENOW" else bar_df
+        all_years = sorted(years_df["Year"].unique())
         if all_years:
             ax.set_xticks(all_years)
             plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
