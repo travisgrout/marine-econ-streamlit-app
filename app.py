@@ -80,7 +80,7 @@ if dorado_results is not None:
         "Real GDP": "RealGDP"
     }
     
-    st.sidebar.image("open_ENOW_logo.png", width=150)
+    st.sidebar.image("open_ENOW_logo.png", width=200)
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
         "Display Mode:",
