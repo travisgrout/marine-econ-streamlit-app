@@ -69,6 +69,7 @@ def get_sector_colors(n):
 
 # --- Main Application ---
 if dorado_results is not None:
+    st.image("open_enow_logo.png", width=150)
     st.title("Marine Economy estimates: states and sectors")
 
     METRIC_MAP = {
