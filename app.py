@@ -69,7 +69,6 @@ def get_sector_colors(n):
 
 # --- Main Application ---
 if dorado_results is not None:
-    st.image("open_ENOW_logo.png", width=150)
     st.title("Marine Economy estimates: states and sectors")
 
     METRIC_MAP = {
@@ -80,7 +79,8 @@ if dorado_results is not None:
         "GDP (nominal)": "GDP",
         "Real GDP": "RealGDP"
     }
-
+    
+    st.sidebar.image("open_ENOW_logo.png", width=150)
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
         "Display Mode:",
