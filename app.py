@@ -218,6 +218,16 @@ if dorado_results is not None:
         if selected_state != "All Coastal States":
             st.divider()  # Adds a horizontal line for separation
 
+            # MODIFIED: Added CSS to vertically center the columns
+            # This targets the container for st.columns and aligns its children (the columns) to the center.
+            st.markdown("""
+                <style>
+                div[data-testid="stHorizontalBlock"] {
+                    align-items: center;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
             # Create two columns: 2/3 for the map, 1/3 for the legend
             map_col, legend_col = st.columns([2, 1])
 
@@ -229,7 +239,7 @@ if dorado_results is not None:
                 if os.path.exists(map_filename):
                     # st.container with border=True adds a styled border around the content
                     with st.container(border=True):
-                        st.image(map_filename, use_container_width=True)
+                        st.image(map_filename, use_column_width=True)
                 else:
                     st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
 
@@ -245,25 +255,25 @@ if dorado_results is not None:
                             margin-top: 15px; /* Adds space between legend items */
                         }
                         .legend-color-box {
-                            width: 25px;         /* Made box slightly larger */
+                            width: 25px;
                             height: 25px;
                             min-width: 25px;     /* Prevents shrinking */
                             margin-right: 10px;
                             border: 1px solid #333; /* Dark border for visibility */
                         }
                         .legend-text {
-                            font-size: 0.95rem; /* Slightly smaller font for long text */
+                            font-size: 1.1rem; /* MODIFIED: Increased font size */
                         }
                     </style>
                     
                     <div class="legend-item">
                         <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
-                        <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        <span class="legend-text">Counties shaded in blue in this map are considered to be coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color-box" style="background-color: #FFFF00;"></div>
-                        <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                        <span class="legend-text">Zip codes shaded in yellow on this map are considered to be coastal for the purposes of the Tourism and Recreation sector.</span>
                     </div>
                 """
                 st.markdown(legend_html, unsafe_allow_html=True)
