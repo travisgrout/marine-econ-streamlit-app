@@ -229,7 +229,7 @@ if dorado_results is not None:
                 if os.path.exists(map_filename):
                     # st.container with border=True adds a styled border around the content
                     with st.container(border=True):
-                        st.image(map_filename, use_column_width=True)
+                        st.image(map_filename, use_container_width=True)
                 else:
                     st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
 
@@ -258,12 +258,12 @@ if dorado_results is not None:
                     
                     <div class="legend-item">
                         <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
-                        <span class="legend-text">Counties shaded in blue in this map are considered to be coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
                     </div>
 
                     <div class="legend-item">
                         <div class="legend-color-box" style="background-color: #FFFF00;"></div>
-                        <span class="legend-text">Zip codes shaded in yellow on this map are considered to be coastal for the purposes of the Tourism and Recreation sector.</span>
+                        <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
                     </div>
                 """
                 st.markdown(legend_html, unsafe_allow_html=True)
