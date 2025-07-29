@@ -217,7 +217,15 @@ if dorado_results is not None:
         # --- ADDED: Map and Legend Display ---
         if selected_state != "All Coastal States":
 
-            # MODIFIED: Wrapped the entire map/legend section in an expander
+            st.markdown("""
+                <style>
+                div[data-testid="stExpander"] summary {
+                    font-size: 1.75rem;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            
+            # Wrapped the entire map/legend section in an expander
             with st.expander("Coastal geographies in Open ENOW"):
                 st.divider()  # Adds a horizontal line for separation inside the expander
 
