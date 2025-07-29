@@ -240,7 +240,7 @@ if dorado_results is not None:
                     # Check if the map file exists before trying to display it
                     if os.path.exists(map_filename):
                         with st.container(border=True):
-                            st.image(map_filename, use_column_width=True)
+                            st.image(map_filename, use_container_width=True)
                     else:
                         st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
 
