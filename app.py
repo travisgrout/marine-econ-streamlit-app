@@ -221,7 +221,7 @@ if dorado_results is not None:
             st.markdown("""
                 <style>
                 div[data-testid="stExpander"] summary {
-                    font-size: 2.75rem;
+                    font-size: 1.75rem;
                 }
                 </style>
                 """, unsafe_allow_html=True)
