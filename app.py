@@ -216,67 +216,68 @@ if dorado_results is not None:
 
         # --- ADDED: Map and Legend Display ---
         if selected_state != "All Coastal States":
-            st.divider()  # Adds a horizontal line for separation
 
-            # MODIFIED: Added CSS to vertically center the columns
-            # This targets the container for st.columns and aligns its children (the columns) to the center.
-            st.markdown("""
-                <style>
-                div[data-testid="stHorizontalBlock"] {
-                    align-items: center;
-                }
-                </style>
-                """, unsafe_allow_html=True)
+            # MODIFIED: Wrapped the entire map/legend section in an expander
+            with st.expander("Coastal geographies in Open ENOW"):
+                st.divider()  # Adds a horizontal line for separation inside the expander
 
-            # Create two columns: 2/3 for the map, 1/3 for the legend
-            map_col, legend_col = st.columns([2, 1])
-
-            with map_col:
-                # Format the state name for the filename (e.g., "North Carolina" -> "Map_North_Carolina.jpg")
-                map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
-
-                # Check if the map file exists before trying to display it
-                if os.path.exists(map_filename):
-                    # st.container with border=True adds a styled border around the content
-                    with st.container(border=True):
-                        st.image(map_filename, use_container_width=True)
-                else:
-                    st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
-
-            with legend_col:
-                # Legend Title and custom HTML for colored boxes
-                st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
-                
-                legend_html = """
+                # CSS to vertically center the columns
+                st.markdown("""
                     <style>
-                        .legend-item {
-                            display: flex;
-                            align-items: flex-start; /* Aligns items to the top */
-                            margin-top: 15px; /* Adds space between legend items */
-                        }
-                        .legend-color-box {
-                            width: 25px;
-                            height: 25px;
-                            min-width: 25px;     /* Prevents shrinking */
-                            margin-right: 10px;
-                            border: 1px solid #333; /* Dark border for visibility */
-                        }
-                        .legend-text {
-                            font-size: 1.1rem; /* MODIFIED: Increased font size */
-                        }
+                    div[data-testid="stHorizontalBlock"] {
+                        align-items: center;
+                    }
                     </style>
-                    
-                    <div class="legend-item">
-                        <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
-                        <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
-                    </div>
+                    """, unsafe_allow_html=True)
 
-                    <div class="legend-item">
-                        <div class="legend-color-box" style="background-color: #FFFF00;"></div>
-                        <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
-                    </div>
-                """
-                st.markdown(legend_html, unsafe_allow_html=True)
+                # Create two columns: 2/3 for the map, 1/3 for the legend
+                map_col, legend_col = st.columns([2, 1])
+
+                with map_col:
+                    # Format the state name for the filename
+                    map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
+
+                    # Check if the map file exists before trying to display it
+                    if os.path.exists(map_filename):
+                        with st.container(border=True):
+                            st.image(map_filename, use_column_width=True)
+                    else:
+                        st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
+
+                with legend_col:
+                    # Legend Title and custom HTML for colored boxes
+                    st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                    
+                    legend_html = """
+                        <style>
+                            .legend-item {
+                                display: flex;
+                                align-items: flex-start;
+                                margin-top: 15px;
+                            }
+                            .legend-color-box {
+                                width: 25px;
+                                height: 25px;
+                                min-width: 25px;
+                                margin-right: 10px;
+                                border: 1px solid #333;
+                            }
+                            .legend-text {
+                                font-size: 1.1rem; 
+                            }
+                        </style>
+                        
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                            <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        </div>
+
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                            <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                        </div>
+                    """
+                    st.markdown(legend_html, unsafe_allow_html=True)
 
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
