@@ -217,6 +217,7 @@ if dorado_results is not None:
         # --- ADDED: Map and Legend Display ---
         if selected_state != "All Coastal States":
 
+            # Added CSS to increase the expander title font size
             st.markdown("""
                 <style>
                 div[data-testid="stExpander"] summary {
