@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import altair as alt
 from textwrap import wrap
+import os # <-- ADDED: To check for file existence
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -112,7 +113,6 @@ if dorado_results is not None:
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     
     # Set the default year range based on the selected plot mode.
-    # This logic also ensures the default values are within the dataset's actual range.
     if plot_mode == "Estimates from Public QCEW Data":
         default_start_year = max(min_year, 2014)
         default_end_year = min(max_year, 2023)
@@ -126,7 +126,7 @@ if dorado_results is not None:
         "Select Year Range:",
         min_value=min_year,
         max_value=max_year,
-        value=default_range,  # Use the dynamic default_range variable here
+        value=default_range,
         step=1
     )
 
@@ -172,8 +172,8 @@ if dorado_results is not None:
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('sum(Estimate_value):Q', title=y_label),
                     color=alt.Color('OceanSector:N', 
-                                  scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
-                                  legend=alt.Legend(title="Sectors")),
+                                    scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
+                                    legend=alt.Legend(title="Sectors")),
                     tooltip=[
                         alt.Tooltip('Year:O', title='Year'),
                         alt.Tooltip('OceanSector:N', title='Sector'),
@@ -214,6 +214,60 @@ if dorado_results is not None:
             else:
                 st.warning("No data available for the selected filters.")
 
+        # --- ADDED: Map and Legend Display ---
+        if selected_state != "All Coastal States":
+            st.divider()  # Adds a horizontal line for separation
+
+            # Create two columns: 2/3 for the map, 1/3 for the legend
+            map_col, legend_col = st.columns([2, 1])
+
+            with map_col:
+                # Format the state name for the filename (e.g., "North Carolina" -> "Map_North_Carolina.jpg")
+                map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
+
+                # Check if the map file exists before trying to display it
+                if os.path.exists(map_filename):
+                    # st.container with border=True adds a styled border around the content
+                    with st.container(border=True):
+                        st.image(map_filename, use_column_width=True)
+                else:
+                    st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
+
+            with legend_col:
+                # Legend Title and custom HTML for colored boxes
+                st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                
+                legend_html = """
+                    <style>
+                        .legend-item {
+                            display: flex;
+                            align-items: flex-start; /* Aligns items to the top */
+                            margin-top: 15px; /* Adds space between legend items */
+                        }
+                        .legend-color-box {
+                            width: 25px;         /* Made box slightly larger */
+                            height: 25px;
+                            min-width: 25px;     /* Prevents shrinking */
+                            margin-right: 10px;
+                            border: 1px solid #333; /* Dark border for visibility */
+                        }
+                        .legend-text {
+                            font-size: 0.95rem; /* Slightly smaller font for long text */
+                        }
+                    </style>
+                    
+                    <div class="legend-item">
+                        <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                        <span class="legend-text">Counties shaded in blue in this map are considered to be coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                    </div>
+
+                    <div class="legend-item">
+                        <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                        <span class="legend-text">Zip codes shaded in yellow on this map are considered to be coastal for the purposes of the Tourism and Recreation sector.</span>
+                    </div>
+                """
+                st.markdown(legend_html, unsafe_allow_html=True)
+
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
         enow_metric_col = selected_metric_internal
@@ -238,8 +292,8 @@ if dorado_results is not None:
                 x=alt.X('Year:O', title='Year'),
                 y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
                 color=alt.Color('Source:N', 
-                              scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
-                              legend=alt.Legend(title="Data Source", orient="bottom")),
+                                scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
+                                legend=alt.Legend(title="Data Source", orient="bottom")),
                 tooltip=[
                     alt.Tooltip('Year:O', title='Year'),
                     alt.Tooltip('Source:N', title='Source'),
