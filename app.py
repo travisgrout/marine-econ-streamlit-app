@@ -77,11 +77,11 @@ SECTOR_DESCRIPTIONS = {
             {"NAICS Code": "11251", "Years": "All years", "Description": "Fish Hatcheries and Aquaculture"},
             {"NAICS Code": "11411", "Years": "All years", "Description": "Fishing"},
             {"NAICS Code": "311710", "Years": "2012 - 2023", "Description": "Seafood Product Preparation and Packaging"},
+            {"NAICS Code": "424460", "Years": "All years", "Description": "Fish and Seafood Merchant Wholesalers"},
+            {"NAICS Code": "445250", "Years": "2022 - 2023", "Description": "Fish and Seafood Retailers"},
             {"NAICS Code": "311711", "Years": "2001 - 2011", "Description": "Seafood Canning"},
             {"NAICS Code": "311712", "Years": "2001 - 2011", "Description": "Fresh and Frozen Seafood Processing"},
-            {"NAICS Code": "424460", "Years": "All years", "Description": "Fish and Seafood Merchant Wholesalers"},
             {"NAICS Code": "445220", "Years": "2001 - 2021", "Description": "Fish and Seafood Markets"},
-            {"NAICS Code": "445250", "Years": "2022 - 2023", "Description": "Fish and Seafood Retailers"},
         ])
     },
     "Marine Construction": {
@@ -102,8 +102,6 @@ SECTOR_DESCRIPTIONS = {
     "Offshore Mineral Resources": {
         "description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor. This includes the extraction of crude petroleum and natural gas, the mining of sand and gravel, and support activities such as drilling and geophysical exploration.",
         "table": pd.DataFrame([
-            {"NAICS Code": "211111", "Years": "2001 - 2016", "Description": "Crude Petroleum and Natural Gas Extraction"},
-            {"NAICS Code": "211112", "Years": "2001 - 2016", "Description": "Natural Gas Liquid Extraction"},
             {"NAICS Code": "211120", "Years": "2017 - 2023", "Description": "Crude Petroleum Extraction"},
             {"NAICS Code": "211130", "Years": "2017 - 2023", "Description": "Natural Gas Extraction"},
             {"NAICS Code": "212321", "Years": "All years", "Description": "Construction Sand and Gravel Mining"},
@@ -111,6 +109,8 @@ SECTOR_DESCRIPTIONS = {
             {"NAICS Code": "213111", "Years": "All years", "Description": "Drilling Oil and Gas Wells"},
             {"NAICS Code": "213112", "Years": "All years", "Description": "Support Activities for Oil and Gas Operations"},
             {"NAICS Code": "541360", "Years": "All years", "Description": "Geophysical Surveying and Mapping Services"},
+            {"NAICS Code": "211111", "Years": "2001 - 2016", "Description": "Crude Petroleum and Natural Gas Extraction"},
+            {"NAICS Code": "211112", "Years": "2001 - 2016", "Description": "Natural Gas Liquid Extraction"},
         ])
     },
     "Ship and Boat Building": {
@@ -127,7 +127,6 @@ SECTOR_DESCRIPTIONS = {
             {"NAICS Code": "487210", "Years": "All years", "Description": "Scenic and Sightseeing Transportation, Water"},
             {"NAICS Code": "487990", "Years": "All years", "Description": "Scenic and Sightseeing Transportation, Other"},
             {"NAICS Code": "532284", "Years": "2017 - 2023", "Description": "Recreational Goods Rental"},
-            {"NAICS Code": "532292", "Years": "2001 - 2016", "Description": "Recreational Goods Rental"},
             {"NAICS Code": "611620", "Years": "All years", "Description": "Sports and Recreation Instruction"},
             {"NAICS Code": "712130", "Years": "All years", "Description": "Zoos and Botanical Gardens"},
             {"NAICS Code": "712190", "Years": "All years", "Description": "Nature Parks and Other Similar Institutions"},
@@ -139,15 +138,16 @@ SECTOR_DESCRIPTIONS = {
             {"NAICS Code": "721199", "Years": "All years", "Description": "All Other Traveler Accommodation"},
             {"NAICS Code": "721211", "Years": "All years", "Description": "RV (Recreational Vehicle) Parks and Campgrounds"},
             {"NAICS Code": "721214", "Years": "All years", "Description": "Recreational and Vacation Camps (except Campgrounds)"},
-            {"NAICS Code": "722110", "Years": "2001 - 2011", "Description": "Full-Service Restaurants"},
-            {"NAICS Code": "722211", "Years": "2001 - 2011", "Description": "Limited-Service Restaurants"},
-            {"NAICS Code": "722212", "Years": "2001 - 2011", "Description": "Cafeterias, Grill Buffets, and Buffets"},
-            {"NAICS Code": "722213", "Years": "2001 - 2011", "Description": "Snack and Nonalcoholic Beverage Bars"},
             {"NAICS Code": "722410", "Years": "All years", "Description": "Drinking Places (Alcoholic Beverages)"},
             {"NAICS Code": "722511", "Years": "2012 - 2023", "Description": "Full-Service Restaurants"},
             {"NAICS Code": "722513", "Years": "2012 - 2023", "Description": "Limited-Service Restaurants"},
             {"NAICS Code": "722514", "Years": "2012 - 2023", "Description": "Cafeterias, Grill Buffets, and Buffets"},
             {"NAICS Code": "722515", "Years": "2012 - 2023", "Description": "Snack and Nonalcoholic Beverage Bars"},
+            {"NAICS Code": "532292", "Years": "2001 - 2016", "Description": "Recreational Goods Rental"},
+            {"NAICS Code": "722110", "Years": "2001 - 2011", "Description": "Full-Service Restaurants"},
+            {"NAICS Code": "722211", "Years": "2001 - 2011", "Description": "Limited-Service Restaurants"},
+            {"NAICS Code": "722212", "Years": "2001 - 2011", "Description": "Cafeterias, Grill Buffets, and Buffets"},
+            {"NAICS Code": "722213", "Years": "2001 - 2011", "Description": "Snack and Nonalcoholic Beverage Bars"},
         ])
     }
 }
