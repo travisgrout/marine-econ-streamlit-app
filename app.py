@@ -205,7 +205,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     unique_states = ["All Coastal States"] + sorted(geo_names)
 
     ocean_sectors = dorado_results["OceanSector"].dropna().unique()
-    unique_sectors = ["All Sectors"] + sorted(ocean_sectors)
+    unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
     
     sorted_sector_names = sorted(ocean_sectors)
     colors_list = get_sector_colors(len(sorted_sector_names))
@@ -243,8 +243,8 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     )
 
     # --- Dynamic Title ---
-    # Check if "All Sectors" is selected to build the title correctly
-    if selected_sector == "All Sectors":
+    # Check if "All Marine Sectors" is selected to build the title correctly
+    if selected_sector == "All Marine Sectors":
         # If so, don't add the extra word "Sector"
         title_sector_part = selected_sector
     else:
@@ -252,7 +252,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         title_sector_part = f"{selected_sector} Sector"
     
     # Construct the final title
-    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {title_sector_part}"
+    plot_title = f"{selected_display_metric} in {selected_state}, {title_sector_part}"
     st.title(plot_title)
     
     # --- Base Data Filtering ---
@@ -262,7 +262,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     ]
     if selected_state != "All Coastal States":
         base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_state]
-    if selected_sector != "All Sectors":
+    if selected_sector != "All Marine Sectors":
         base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
     # --- Plotting and Visualization ---
@@ -290,7 +290,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         if is_currency:
             plot_df["Estimate_value"] /= 1e6
 
-        if selected_sector == "All Sectors":
+        if selected_sector == "All Marine Sectors":
             if not plot_df.empty:
                 chart = alt.Chart(plot_df).mark_bar().encode(
                     x=alt.X('Year:O', title='Year'),
@@ -395,7 +395,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     st.markdown(legend_html, unsafe_allow_html=True)
         
         # --- Expandable Section for Sector Details ---
-        if selected_sector == "All Sectors":
+        if selected_sector == "All Marine Sectors":
             with st.expander("Marine Sectors in Open ENOW"):
                 st.write("""
                 Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
