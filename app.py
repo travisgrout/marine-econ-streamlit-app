@@ -151,7 +151,7 @@ SECTOR_DESCRIPTIONS = {
     }
 }
 
-# --- NEW: Dictionary for Metric Descriptions ---
+# --- Dictionary for Metric Descriptions ---
 METRIC_DESCRIPTIONS = {
     "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
     "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
@@ -192,7 +192,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 * Open ENOW does not currently cover individual counties. The original ENOW dataset reports on marine economic activity in about 475 coastal U.S. counties.
 * Open ENOW reports on a slightly different set of employers than the original ENOW.
 """)
-    # --- END: CORRECTED CODE FOR POP-UP WINDOW ---
+    # --- END: CODE FOR POP-UP WINDOW ---
 
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
@@ -252,7 +252,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         title_sector_part = f"{selected_sector} Sector"
     
     # Construct the final title
-    plot_title = f"{title_sector_part} {selected_display_metric} in {selected_state}"
+    plot_title = f"{title_sector_part}: {selected_display_metric} in {selected_state}"
     st.title(plot_title)
     
     # --- Base Data Filtering ---
