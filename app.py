@@ -257,7 +257,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     else:
         title_sector_part = f"{selected_sector} Sector"
     
-    plot_title = f"{title_sector_part}: {selected_display_metric} in {selected_state}"
+    plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_state}"
     st.title(plot_title)
     
     # --- Base Data Filtering ---
