@@ -358,7 +358,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
 
             st.download_button(
-               label="📥 Download Data as CSV",
+               label="📥 Download Selected Data as CSV",
                data=csv_data,
                file_name=file_name,
                mime='text/csv',
