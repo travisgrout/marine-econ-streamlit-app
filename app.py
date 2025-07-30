@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import altair as alt
 from textwrap import wrap
-import os # <-- ADDED: To check for file existence
+import os
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -66,6 +66,66 @@ def get_sector_colors(n):
         "#009E73", "#F0E442"
     ]
     return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
+
+
+# --- ADDED: Sector Descriptions and NAICS Tables ---
+# This dictionary holds the descriptive text and NAICS tables for each sector.
+SECTOR_DESCRIPTIONS = {
+    "Living Resources": {
+        "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life. This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "1141", "Years": "2017-2023", "Description": "Fishing"},
+            {"NAICS Code": "1142", "Years": "2017-2023", "Description": "Hunting and Trapping"},
+            {"NAICS Code": "1125", "Years": "2017-2023", "Description": "Aquaculture"},
+            {"NAICS Code": "3117", "Years": "2017-2023", "Description": "Seafood Product Preparation and Packaging"},
+            {"NAICS Code": "42446", "Years": "2017-2023", "Description": "Fish and Seafood Merchant Wholesalers"},
+            {"NAICS Code": "44522", "Years": "2017-2023", "Description": "Fish and Seafood Markets"},
+            {"NAICS Code": "42442", "Years": "2017-2023", "Description": "Packaged Frozen Food Merchant Wholesalers"},
+            {"NAICS Code": "42449", "Years": "2017-2023", "Description": "Other Grocery and Related Products Merchant Wholesalers"},
+        ])
+    },
+    "Marine Construction": {
+        "description": "The Marine Construction sector comprises establishments primarily engaged in the construction of marine-related infrastructure. This includes projects like dredging, pier and marine terminal construction, and other specialized construction activities occurring in a marine environment.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "237990", "Years": "2017-2023", "Description": "Other Heavy and Civil Engineering Construction"}
+        ])
+    },
+    "Marine Transportation": {
+        "description": "The Marine Transportation sector involves industries that provide transportation of passengers and cargo over water. It covers deep-sea, coastal, and Great Lakes shipping, as well as port and harbor operations and other support activities.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "483111", "Years": "2017-2023", "Description": "Deep Sea Freight Transportation"},
+            {"NAICS Code": "483113", "Years": "2017-2023", "Description": "Coastal and Great Lakes Freight Transportation"},
+            {"NAICS Code": "483211", "Years": "2017-2023", "Description": "Inland Water Freight Transportation"},
+            {"NAICS Code": "488310", "Years": "2017-2023", "Description": "Port and Harbor Operations"},
+            {"NAICS Code": "488320", "Years": "2017-2023", "Description": "Marine Cargo Handling"},
+            {"NAICS Code": "488330", "Years": "2017-2023", "Description": "Navigational Services to Shipping"}
+        ])
+    },
+    "Offshore Mineral Resources": {
+        "description": "The Offshore Mineral Resources sector includes industries involved in the exploration, extraction, and production of minerals from the seabed and beneath. This primarily focuses on oil and natural gas extraction activities in offshore environments.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "211130", "Years": "2017-2023", "Description": "Crude Petroleum and Natural Gas Extraction"},
+            {"NAICS Code": "213111", "Years": "2017-2023", "Description": "Drilling Oil and Gas Wells"},
+            {"NAICS Code": "213112", "Years": "2017-2023", "Description": "Support Activities for Oil and Gas Operations"}
+        ])
+    },
+    "Ship and Boat Building": {
+        "description": "The Ship and Boat Building sector consists of establishments that construct, repair, convert, and alter ships, boats, and other marine vessels. This includes both commercial and recreational boat manufacturing and maintenance.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "336611", "Years": "2017-2023", "Description": "Ship Building and Repairing"},
+            {"NAICS Code": "336612", "Years": "2017-2023", "Description": "Boat Building"}
+        ])
+    },
+    "Tourism and Recreation": {
+        "description": "The Tourism and Recreation sector captures economic activity related to coastal and ocean-based leisure and tourism. This includes recreational boating, marinas, amusement parks, coastal hotels, and sightseeing transportation.",
+        "table": pd.DataFrame([
+            {"NAICS Code": "713930", "Years": "2017-2023", "Description": "Marinas"},
+            {"NAICS Code": "487210", "Years": "2017-2023", "Description": "Scenic and Sightseeing Transportation, Water"},
+            {"NAICS Code": "713990", "Years": "2017-2023", "Description": "All Other Amusement and Recreation Industries"},
+            {"NAICS Code": "721110", "Years": "2017-2023", "Description": "Hotels (except Casino Hotels) and Motels"}
+        ])
+    }
+}
 
 
 # --- Main Application ---
@@ -213,8 +273,30 @@ if dorado_results is not None:
                 st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
+        
+        # --- START: NEW EXPANDABLE SECTION ---
+        st.markdown("---") # Visual separator
 
-        # --- ADDED: Map and Legend Display ---
+        if selected_sector == "All Sectors":
+            with st.expander("Marine Sectors in Open ENOW"):
+                st.write("""
+                Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
+                Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
+                Tourism and Recreation. For a detailed description of each sector, make a 
+                selection from the drop-down menu on the left.
+                """)
+        else:
+            # Check if the selected sector has a description available
+            if selected_sector in SECTOR_DESCRIPTIONS:
+                expander_title = f"The {selected_sector} Sector in Open ENOW"
+                with st.expander(expander_title):
+                    st.divider() 
+                    sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                    st.write(sector_info['description'])
+                    st.dataframe(sector_info['table'], use_container_width=True, hide_index=True)
+        # --- END: NEW EXPANDABLE SECTION ---
+
+        # --- Map and Legend Display ---
         if selected_state != "All Coastal States":
 
             # Added CSS to increase the expander title font size
