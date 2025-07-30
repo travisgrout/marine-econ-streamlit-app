@@ -67,6 +67,15 @@ def get_sector_colors(n):
     ]
     return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
 
+# --- NEW: Function to convert DataFrame to CSV ---
+@st.cache_data
+def convert_df_to_csv(df):
+    """
+    Converts a Pandas DataFrame to a CSV string, encoded in UTF-8.
+    This function is cached to improve performance.
+    """
+    return df.to_csv(index=False).encode('utf-8')
+
 
 # --- Data Dictionaries for Expanders ---
 SECTOR_DESCRIPTIONS = {
@@ -243,15 +252,11 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     )
 
     # --- Dynamic Title ---
-    # Check if "All Marine Sectors" is selected to build the title correctly
     if selected_sector == "All Marine Sectors":
-        # If so, don't add the extra word "Sector"
         title_sector_part = selected_sector
     else:
-        # Otherwise, add the word "Sector" after the specific sector name
         title_sector_part = f"{selected_sector} Sector"
     
-    # Construct the final title
     plot_title = f"{title_sector_part}: {selected_display_metric} in {selected_state}"
     st.title(plot_title)
     
@@ -334,6 +339,31 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                 st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
+        
+        # --- NEW: Data Download Section ---
+        if not plot_df.empty:
+            st.divider()
+            # Prepare data for download to match the chart's aggregation level
+            if selected_sector == "All Marine Sectors":
+                download_df = plot_df.groupby(['Year', 'OceanSector'])['Estimate_value'].sum().reset_index()
+            else:
+                download_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
+                download_df.insert(1, 'OceanSector', selected_sector) # Add sector context
+
+            # Rename the value column to be descriptive (e.g., "GDP ($ millions)")
+            download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+
+            csv_data = convert_df_to_csv(download_df)
+            
+            # Create a dynamic filename based on user filters
+            file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+
+            st.download_button(
+               label="📥 Download Data as CSV",
+               data=csv_data,
+               file_name=file_name,
+               mime='text/csv',
+            )
         
         # --- Coastal Geographies Display ---
         if selected_state == "All Coastal States":
@@ -437,7 +467,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         metric_expander_title = f"{selected_display_metric} in Open ENOW"
         with st.expander(metric_expander_title):
             st.divider()
-            # Look up the description from the dictionary using the selected metric
             description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
             st.write(description)
 
@@ -488,6 +517,21 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 
             st.altair_chart(chart, use_container_width=True)
 
+            # --- NEW: Data Download Section ---
+            st.divider()
+            
+            csv_data_compare = convert_df_to_csv(compare_df)
+            
+            # Create a dynamic filename
+            file_name_compare = f"Comparison_{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+
+            st.download_button(
+               label="📥 Download Comparison Data as CSV",
+               data=csv_data_compare,
+               file_name=file_name_compare,
+               mime='text/csv',
+            )
+            
             # --- Summary Statistics ---
             diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
             pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
