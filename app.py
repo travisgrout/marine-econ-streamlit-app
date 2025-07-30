@@ -368,8 +368,6 @@ if dorado_results is not None:
                     st.markdown(legend_html, unsafe_allow_html=True)
         
         # --- Expandable Section for Sector Details ---
-        st.markdown("---") # Visual separator
-
         if selected_sector == "All Sectors":
             with st.expander("Marine Sectors in Open ENOW"):
                 st.write("""
