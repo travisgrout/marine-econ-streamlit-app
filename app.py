@@ -397,6 +397,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         # --- Expandable Section for Sector Details ---
         if selected_sector == "All Marine Sectors":
             with st.expander("Marine Sectors in Open ENOW"):
+                st.divider()
                 st.write("""
                 Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
                 Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
