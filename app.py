@@ -374,22 +374,32 @@ if dorado_results is not None:
                     st.write(sector_info['description'])
                     
                     # --- MODIFICATION START ---
-                    # Define a function to apply styling to the DataFrame rows
-                    def highlight_inactive_years(row):
-                        years_val = row['Years']
-                        # A row is considered "inactive" if its year range is not "All years" and does not end with "- present"
-                        is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                    # Define a function to apply multiple styles to the DataFrame rows
+                    def style_naics_table(row):
+                        # Define the NAICS codes to highlight in yellow
+                        # Note: 713110 was listed twice, so we use the unique set.
+                        highlight_codes = ["713110", "721199", "721214"]
                         
-                        # Apply gray background to inactive rows, otherwise no style
-                        style = 'background-color: #f0f0f0' # Light gray
-                        if is_active:
-                            return ['' for _ in row]
-                        else:
-                            return [style for _ in row]
+                        # Define styles
+                        yellow_style = 'background-color: #FFFF00' # Yellow
+                        gray_style = 'background-color: #f0f0f0'   # Light Gray
+
+                        # Condition 1: Highlight specific NAICS codes in yellow (takes precedence)
+                        if row['NAICS Code'] in highlight_codes:
+                            return [yellow_style for _ in row]
+
+                        # Condition 2: Highlight inactive year rows in gray
+                        years_val = row['Years']
+                        is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                        if not is_active:
+                            return [gray_style for _ in row]
+
+                        # Default: No style for any other row
+                        return ['' for _ in row]
 
                     # Apply the styling function to the dataframe before displaying it
                     st.dataframe(
-                        sector_info['table'].style.apply(highlight_inactive_years, axis=1), 
+                        sector_info['table'].style.apply(style_naics_table, axis=1), 
                         use_container_width=True, 
                         hide_index=True
                     )
