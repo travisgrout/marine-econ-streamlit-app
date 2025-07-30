@@ -72,7 +72,7 @@ def get_sector_colors(n):
 # This dictionary holds the descriptive text and NAICS tables for each sector based on the provided document.
 SECTOR_DESCRIPTIONS = {
     "Living Resources": {
-        [cite_start]"description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life[cite: 2]. [cite_start]This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets[cite: 3].",
+        "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life. This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets.",
         "table": pd.DataFrame([
             {"NAICS Code": "11251", "Years": "All years", "Description": "Fish Hatcheries and Aquaculture"},
             {"NAICS Code": "11411", "Years": "All years", "Description": "Fishing"},
@@ -85,13 +85,13 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Marine Construction": {
-        [cite_start]"description": "The Marine Construction sector is composed of establishments involved in heavy and civil engineering construction that is related to the marine environment, such as dredging, pier construction, and beach nourishment[cite: 6].",
+        "description": "The Marine Construction sector is composed of establishments involved in heavy and civil engineering construction that is related to the marine environment, such as dredging, pier construction, and beach nourishment.",
         "table": pd.DataFrame([
             {"NAICS Code": "237990", "Years": "All years", "Description": "Other Heavy and Civil Engineering Construction"}
         ])
     },
     "Marine Transportation": {
-        [cite_start]"description": "The Marine Transportation sector includes industries that provide transportation for freight and passengers on the deep sea, coastal waters, or the Great Lakes[cite: 9]. [cite_start]It also covers support activities essential for water transport, such as port and harbor operations, marine cargo handling, and navigational services[cite: 10]. [cite_start]The manufacturing of search and navigation equipment and warehousing services are also included in this sector[cite: 11].",
+        "description": "The Marine Transportation sector includes industries that provide transportation for freight and passengers on the deep sea, coastal waters, or the Great Lakes. It also covers support activities essential for water transport, such as port and harbor operations, marine cargo handling, and navigational services. The manufacturing of search and navigation equipment and warehousing services are also included in this sector.",
         "table": pd.DataFrame([
             {"NAICS Code": "334511", "Years": "All years", "Description": "Search, Detection, Navigation, Guidance, Aeronautical, and Nautical System and Instrument Manufacturing"},
             {"NAICS Code": "48311", "Years": "All years", "Description": "Marine Freight and Passenger Transport"},
@@ -100,7 +100,7 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Offshore Mineral Resources": {
-        [cite_start]"description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor[cite: 14]. [cite_start]This includes the extraction of crude petroleum and natural gas, the mining of sand and gravel, and support activities such as drilling and geophysical exploration[cite: 15].",
+        "description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor. This includes the extraction of crude petroleum and natural gas, the mining of sand and gravel, and support activities such as drilling and geophysical exploration.",
         "table": pd.DataFrame([
             {"NAICS Code": "211111", "Years": "2001 - 2016", "Description": "Crude Petroleum and Natural Gas Extraction"},
             {"NAICS Code": "211112", "Years": "2001 - 2016", "Description": "Natural Gas Liquid Extraction"},
@@ -114,13 +114,13 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Ship and Boat Building": {
-        [cite_start]"description": "The Ship and Boat Building sector is composed of establishments that build, repair, and maintain ships and recreational boats[cite: 18].",
+        "description": "The Ship and Boat Building sector is composed of establishments that build, repair, and maintain ships and recreational boats.",
         "table": pd.DataFrame([
             {"NAICS Code": "33661", "Years": "All years", "Description": "Ship and Boat Building"}
         ])
     },
     "Tourism and Recreation": {
-        [cite_start]"description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation[cite: 21]. [cite_start]This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations[cite: 22]. [cite_start]It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks[cite: 23]. [cite_start]Note that some codes included in this sector are not in the original ENOW dataset[cite: 24].",
+        "description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation. This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations. It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks. Note that four of the codes used in this sector are not in the original ENOW dataset.",
         "table": pd.DataFrame([
             {"NAICS Code": "339920", "Years": "All years", "Description": "Sporting and Athletic Goods Manufacturing"},
             {"NAICS Code": "441222", "Years": "All years", "Description": "Boat Dealers"},
