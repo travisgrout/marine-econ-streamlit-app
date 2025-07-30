@@ -299,28 +299,6 @@ if dorado_results is not None:
             else:
                 st.warning("No data available for the selected filters.")
         
-        # --- Expandable Section for Sector Details ---
-        st.markdown("---") # Visual separator
-
-        if selected_sector == "All Sectors":
-            with st.expander("Marine Sectors in Open ENOW"):
-                st.write("""
-                Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
-                Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
-                Tourism and Recreation. For a detailed description of each sector, make a 
-                selection from the drop-down menu on the left.
-                """)
-        else:
-            if selected_sector in SECTOR_DESCRIPTIONS:
-                expander_title = f"The {selected_sector} Sector in Open ENOW"
-                with st.expander(expander_title):
-                    st.divider() 
-                    sector_info = SECTOR_DESCRIPTIONS[selected_sector]
-                    # Display the description, removing citation markers for a clean look
-                    clean_description = sector_info['description'].split('
-                    st.write(clean_description)
-                    st.dataframe(sector_info['table'], use_container_width=True, hide_index=True)
-
         # --- Map and Legend Display ---
         if selected_state != "All Coastal States":
 
@@ -373,6 +351,28 @@ if dorado_results is not None:
                         </div>
                     """
                     st.markdown(legend_html, unsafe_allow_html=True)
+
+        
+        # --- Expandable Section for Sector Details ---
+        st.markdown("---") # Visual separator
+
+        if selected_sector == "All Sectors":
+            with st.expander("Marine Sectors in Open ENOW"):
+                st.write("""
+                Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
+                Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
+                Tourism and Recreation. For a detailed description of each sector, make a 
+                selection from the drop-down menu on the left.
+                """)
+        else:
+            if selected_sector in SECTOR_DESCRIPTIONS:
+                expander_title = f"The {selected_sector} Sector in Open ENOW"
+                with st.expander(expander_title):
+                    st.divider() 
+                    sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                    # The description text is already clean, so we can write it directly.
+                    st.write(sector_info['description'])
+                    st.dataframe(sector_info['table'], use_container_width=True, hide_index=True)
 
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
