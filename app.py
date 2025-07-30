@@ -372,7 +372,29 @@ if dorado_results is not None:
                     sector_info = SECTOR_DESCRIPTIONS[selected_sector]
                     # The description text is already clean, so we can write it directly.
                     st.write(sector_info['description'])
-                    st.dataframe(sector_info['table'], use_container_width=True, hide_index=True)
+                    
+                    # --- MODIFICATION START ---
+                    # Define a function to apply styling to the DataFrame rows
+                    def highlight_inactive_years(row):
+                        years_val = row['Years']
+                        # A row is considered "inactive" if its year range is not "All years" and does not end with "- present"
+                        is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                        
+                        # Apply gray background to inactive rows, otherwise no style
+                        style = 'background-color: #f0f0f0' # Light gray
+                        if is_active:
+                            return ['' for _ in row]
+                        else:
+                            return [style for _ in row]
+
+                    # Apply the styling function to the dataframe before displaying it
+                    st.dataframe(
+                        sector_info['table'].style.apply(highlight_inactive_years, axis=1), 
+                        use_container_width=True, 
+                        hide_index=True
+                    )
+                    # --- MODIFICATION END ---
+
 
     # --- Mode 2: Compare to ENOW ---
     elif plot_mode == "Compare to ENOW":
