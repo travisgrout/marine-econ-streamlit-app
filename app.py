@@ -68,8 +68,8 @@ def get_sector_colors(n):
     return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
 
 
-# --- UPDATED: Sector Descriptions and NAICS Tables ---
-# This dictionary holds the descriptive text and NAICS tables for each sector based on the provided document.
+# --- ADDED: Sector Descriptions and NAICS Tables ---
+# This dictionary holds the descriptive text and NAICS tables for each sector.
 SECTOR_DESCRIPTIONS = {
     "Living Resources": {
         [cite_start]"description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life[cite: 2]. [cite_start]This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets[cite: 3].",
@@ -151,7 +151,6 @@ SECTOR_DESCRIPTIONS = {
         ])
     }
 }
-
 
 # --- Main Application ---
 if dorado_results is not None:
@@ -299,7 +298,7 @@ if dorado_results is not None:
             else:
                 st.warning("No data available for the selected filters.")
         
-        # --- Expandable Section for Sector Details ---
+        # --- START: NEW EXPANDABLE SECTION ---
         st.markdown("---") # Visual separator
 
         if selected_sector == "All Sectors":
@@ -311,19 +310,20 @@ if dorado_results is not None:
                 selection from the drop-down menu on the left.
                 """)
         else:
+            # Check if the selected sector has a description available
             if selected_sector in SECTOR_DESCRIPTIONS:
                 expander_title = f"The {selected_sector} Sector in Open ENOW"
                 with st.expander(expander_title):
                     st.divider() 
                     sector_info = SECTOR_DESCRIPTIONS[selected_sector]
-                    # Display the description, removing citation markers for a clean look
-                    clean_description = sector_info['description'].split('
-                    st.write(clean_description)
+                    st.write(sector_info['description'])
                     st.dataframe(sector_info['table'], use_container_width=True, hide_index=True)
+        # --- END: NEW EXPANDABLE SECTION ---
 
         # --- Map and Legend Display ---
         if selected_state != "All Coastal States":
 
+            # Added CSS to increase the expander title font size
             st.markdown("""
                 <style>
                 div[data-testid="stExpander"] summary {
@@ -332,9 +332,11 @@ if dorado_results is not None:
                 </style>
                 """, unsafe_allow_html=True)
             
+            # Wrapped the entire map/legend section in an expander
             with st.expander("Coastal geographies in Open ENOW"):
-                st.divider()
+                st.divider()  # Adds a horizontal line for separation inside the expander
 
+                # CSS to vertically center the columns
                 st.markdown("""
                     <style>
                     div[data-testid="stHorizontalBlock"] {
@@ -343,11 +345,14 @@ if dorado_results is not None:
                     </style>
                     """, unsafe_allow_html=True)
 
+                # Create two columns: 2/3 for the map, 1/3 for the legend
                 map_col, legend_col = st.columns([2, 1])
 
                 with map_col:
+                    # Format the state name for the filename
                     map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
 
+                    # Check if the map file exists before trying to display it
                     if os.path.exists(map_filename):
                         with st.container(border=True):
                             st.image(map_filename, use_container_width=True)
@@ -355,18 +360,33 @@ if dorado_results is not None:
                         st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
 
                 with legend_col:
+                    # Legend Title and custom HTML for colored boxes
                     st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
                     
                     legend_html = """
                         <style>
-                            .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
-                            .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
-                            .legend-text { font-size: 1.1rem; }
+                            .legend-item {
+                                display: flex;
+                                align-items: flex-start;
+                                margin-top: 15px;
+                            }
+                            .legend-color-box {
+                                width: 25px;
+                                height: 25px;
+                                min-width: 25px;
+                                margin-right: 10px;
+                                border: 1px solid #333;
+                            }
+                            .legend-text {
+                                font-size: 1.1rem; 
+                            }
                         </style>
+                        
                         <div class="legend-item">
                             <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
                             <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
                         </div>
+
                         <div class="legend-item">
                             <div class="legend-color-box" style="background-color: #FFFF00;"></div>
                             <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
