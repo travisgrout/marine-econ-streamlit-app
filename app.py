@@ -340,9 +340,8 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             else:
                 st.warning("No data available for the selected filters.")
         
-        # --- NEW: Data Download Section ---
+        # --- Data Download Section ---
         if not plot_df.empty:
-            st.divider()
             # Prepare data for download to match the chart's aggregation level
             if selected_sector == "All Marine Sectors":
                 download_df = plot_df.groupby(['Year', 'OceanSector'])['Estimate_value'].sum().reset_index()
