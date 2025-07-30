@@ -295,7 +295,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                         alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    title= ,
+                    title=plot_title,
                     height=500
                 ).configure_axis(
                     labelFontSize=14,
