@@ -72,85 +72,61 @@ def get_sector_colors(n):
 # This dictionary holds the descriptive text and NAICS tables for each sector.
 SECTOR_DESCRIPTIONS = {
     "Living Resources": {
-        [cite_start]"description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life[cite: 2]. [cite_start]This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets[cite: 3].",
+        "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life. This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets.",
         "table": pd.DataFrame([
-            {"NAICS Code": "11251", "Years": "All years", "Description": "Fish Hatcheries and Aquaculture"},
-            {"NAICS Code": "11411", "Years": "All years", "Description": "Fishing"},
-            {"NAICS Code": "311710", "Years": "2012 - 2023", "Description": "Seafood Product Preparation and Packaging"},
-            {"NAICS Code": "311711", "Years": "2001 - 2011", "Description": "Seafood Canning"},
-            {"NAICS Code": "311712", "Years": "2001 - 2011", "Description": "Fresh and Frozen Seafood Processing"},
-            {"NAICS Code": "424460", "Years": "All years", "Description": "Fish and Seafood Merchant Wholesalers"},
-            {"NAICS Code": "445220", "Years": "2001 - 2021", "Description": "Fish and Seafood Markets"},
-            {"NAICS Code": "445250", "Years": "2022 - 2023", "Description": "Fish and Seafood Retailers"},
+            {"NAICS Code": "1141", "Years": "2017-2023", "Description": "Fishing"},
+            {"NAICS Code": "1142", "Years": "2017-2023", "Description": "Hunting and Trapping"},
+            {"NAICS Code": "1125", "Years": "2017-2023", "Description": "Aquaculture"},
+            {"NAICS Code": "3117", "Years": "2017-2023", "Description": "Seafood Product Preparation and Packaging"},
+            {"NAICS Code": "42446", "Years": "2017-2023", "Description": "Fish and Seafood Merchant Wholesalers"},
+            {"NAICS Code": "44522", "Years": "2017-2023", "Description": "Fish and Seafood Markets"},
+            {"NAICS Code": "42442", "Years": "2017-2023", "Description": "Packaged Frozen Food Merchant Wholesalers"},
+            {"NAICS Code": "42449", "Years": "2017-2023", "Description": "Other Grocery and Related Products Merchant Wholesalers"},
         ])
     },
     "Marine Construction": {
-        [cite_start]"description": "The Marine Construction sector is composed of establishments involved in heavy and civil engineering construction that is related to the marine environment, such as dredging, pier construction, and beach nourishment[cite: 6].",
+        "description": "The Marine Construction sector comprises establishments primarily engaged in the construction of marine-related infrastructure. This includes projects like dredging, pier and marine terminal construction, and other specialized construction activities occurring in a marine environment.",
         "table": pd.DataFrame([
-            {"NAICS Code": "237990", "Years": "All years", "Description": "Other Heavy and Civil Engineering Construction"}
+            {"NAICS Code": "237990", "Years": "2017-2023", "Description": "Other Heavy and Civil Engineering Construction"}
         ])
     },
     "Marine Transportation": {
-        [cite_start]"description": "The Marine Transportation sector includes industries that provide transportation for freight and passengers on the deep sea, coastal waters, or the Great Lakes[cite: 9]. [cite_start]It also covers support activities essential for water transport, such as port and harbor operations, marine cargo handling, and navigational services[cite: 10]. [cite_start]The manufacturing of search and navigation equipment and warehousing services are also included in this sector[cite: 11].",
+        "description": "The Marine Transportation sector involves industries that provide transportation of passengers and cargo over water. It covers deep-sea, coastal, and Great Lakes shipping, as well as port and harbor operations and other support activities.",
         "table": pd.DataFrame([
-            {"NAICS Code": "334511", "Years": "All years", "Description": "Search, Detection, Navigation, Guidance, Aeronautical, and Nautical System and Instrument Manufacturing"},
-            {"NAICS Code": "48311", "Years": "All years", "Description": "Marine Freight and Passenger Transport"},
-            {"NAICS Code": "4883", "Years": "All years", "Description": "Marine Transportation Services"},
-            {"NAICS Code": "4931", "Years": "All years", "Description": "Warehousing"},
+            {"NAICS Code": "483111", "Years": "2017-2023", "Description": "Deep Sea Freight Transportation"},
+            {"NAICS Code": "483113", "Years": "2017-2023", "Description": "Coastal and Great Lakes Freight Transportation"},
+            {"NAICS Code": "483211", "Years": "2017-2023", "Description": "Inland Water Freight Transportation"},
+            {"NAICS Code": "488310", "Years": "2017-2023", "Description": "Port and Harbor Operations"},
+            {"NAICS Code": "488320", "Years": "2017-2023", "Description": "Marine Cargo Handling"},
+            {"NAICS Code": "488330", "Years": "2017-2023", "Description": "Navigational Services to Shipping"}
         ])
     },
     "Offshore Mineral Resources": {
-        [cite_start]"description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor[cite: 14]. [cite_start]This includes the extraction of crude petroleum and natural gas, the mining of sand and gravel, and support activities such as drilling and geophysical exploration[cite: 15].",
+        "description": "The Offshore Mineral Resources sector includes industries involved in the exploration, extraction, and production of minerals from the seabed and beneath. This primarily focuses on oil and natural gas extraction activities in offshore environments.",
         "table": pd.DataFrame([
-            {"NAICS Code": "211111", "Years": "2001 - 2016", "Description": "Crude Petroleum and Natural Gas Extraction"},
-            {"NAICS Code": "211112", "Years": "2001 - 2016", "Description": "Natural Gas Liquid Extraction"},
-            {"NAICS Code": "211120", "Years": "2017 - 2023", "Description": "Crude Petroleum Extraction"},
-            {"NAICS Code": "211130", "Years": "2017 - 2023", "Description": "Natural Gas Extraction"},
-            {"NAICS Code": "212321", "Years": "All years", "Description": "Construction Sand and Gravel Mining"},
-            {"NAICS Code": "212322", "Years": "All years", "Description": "Industrial Sand Mining"},
-            {"NAICS Code": "213111", "Years": "All years", "Description": "Drilling Oil and Gas Wells"},
-            {"NAICS Code": "213112", "Years": "All years", "Description": "Support Activities for Oil and Gas Operations"},
-            {"NAICS Code": "541360", "Years": "All years", "Description": "Geophysical Surveying and Mapping Services"},
+            {"NAICS Code": "211130", "Years": "2017-2023", "Description": "Crude Petroleum and Natural Gas Extraction"},
+            {"NAICS Code": "213111", "Years": "2017-2023", "Description": "Drilling Oil and Gas Wells"},
+            {"NAICS Code": "213112", "Years": "2017-2023", "Description": "Support Activities for Oil and Gas Operations"}
         ])
     },
     "Ship and Boat Building": {
-        [cite_start]"description": "The Ship and Boat Building sector is composed of establishments that build, repair, and maintain ships and recreational boats[cite: 18].",
+        "description": "The Ship and Boat Building sector consists of establishments that construct, repair, convert, and alter ships, boats, and other marine vessels. This includes both commercial and recreational boat manufacturing and maintenance.",
         "table": pd.DataFrame([
-            {"NAICS Code": "33661", "Years": "All years", "Description": "Ship and Boat Building"}
+            {"NAICS Code": "336611", "Years": "2017-2023", "Description": "Ship Building and Repairing"},
+            {"NAICS Code": "336612", "Years": "2017-2023", "Description": "Boat Building"}
         ])
     },
     "Tourism and Recreation": {
-        [cite_start]"description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation[cite: 21]. [cite_start]This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations[cite: 22]. [cite_start]It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks[cite: 23]. [cite_start]Note that some codes included in this sector are not in the original ENOW dataset[cite: 24].",
+        "description": "The Tourism and Recreation sector captures economic activity related to coastal and ocean-based leisure and tourism. This includes recreational boating, marinas, amusement parks, coastal hotels, and sightseeing transportation.",
         "table": pd.DataFrame([
-            {"NAICS Code": "339920", "Years": "All years", "Description": "Sporting and Athletic Goods Manufacturing"},
-            {"NAICS Code": "441222", "Years": "All years", "Description": "Boat Dealers"},
-            {"NAICS Code": "487210", "Years": "All years", "Description": "Scenic and Sightseeing Transportation, Water"},
-            {"NAICS Code": "487990", "Years": "All years", "Description": "Scenic and Sightseeing Transportation, Other"},
-            {"NAICS Code": "532284", "Years": "2017 - 2023", "Description": "Recreational Goods Rental"},
-            {"NAICS Code": "532292", "Years": "2001 - 2016", "Description": "Recreational Goods Rental"},
-            {"NAICS Code": "611620", "Years": "All years", "Description": "Sports and Recreation Instruction"},
-            {"NAICS Code": "712130", "Years": "All years", "Description": "Zoos and Botanical Gardens"},
-            {"NAICS Code": "712190", "Years": "All years", "Description": "Nature Parks and Other Similar Institutions"},
-            {"NAICS Code": "713110", "Years": "All years", "Description": "Amusement and Theme Parks"},
-            {"NAICS Code": "713930", "Years": "All years", "Description": "Marinas"},
-            {"NAICS Code": "713990", "Years": "All years", "Description": "All Other Amusement and Recreation Industries"},
-            {"NAICS Code": "721110", "Years": "All years", "Description": "Hotels (except Casino Hotels) and Motels"},
-            {"NAICS Code": "721191", "Years": "All years", "Description": "Bed-and-Breakfast Inns"},
-            {"NAICS Code": "721199", "Years": "All years", "Description": "All Other Traveler Accommodation"},
-            {"NAICS Code": "721211", "Years": "All years", "Description": "RV (Recreational Vehicle) Parks and Campgrounds"},
-            {"NAICS Code": "721214", "Years": "All years", "Description": "Recreational and Vacation Camps (except Campgrounds)"},
-            {"NAICS Code": "722110", "Years": "2001 - 2011", "Description": "Full-Service Restaurants"},
-            {"NAICS Code": "722211", "Years": "2001 - 2011", "Description": "Limited-Service Restaurants"},
-            {"NAICS Code": "722212", "Years": "2001 - 2011", "Description": "Cafeterias, Grill Buffets, and Buffets"},
-            {"NAICS Code": "722213", "Years": "2001 - 2011", "Description": "Snack and Nonalcoholic Beverage Bars"},
-            {"NAICS Code": "722410", "Years": "All years", "Description": "Drinking Places (Alcoholic Beverages)"},
-            {"NAICS Code": "722511", "Years": "2012 - 2023", "Description": "Full-Service Restaurants"},
-            {"NAICS Code": "722513", "Years": "2012 - 2023", "Description": "Limited-Service Restaurants"},
-            {"NAICS Code": "722514", "Years": "2012 - 2023", "Description": "Cafeterias, Grill Buffets, and Buffets"},
-            {"NAICS Code": "722515", "Years": "2012 - 2023", "Description": "Snack and Nonalcoholic Beverage Bars"},
+            {"NAICS Code": "713930", "Years": "2017-2023", "Description": "Marinas"},
+            {"NAICS Code": "487210", "Years": "2017-2023", "Description": "Scenic and Sightseeing Transportation, Water"},
+            {"NAICS Code": "713990", "Years": "2017-2023", "Description": "All Other Amusement and Recreation Industries"},
+            {"NAICS Code": "721110", "Years": "2017-2023", "Description": "Hotels (except Casino Hotels) and Motels"}
         ])
     }
 }
+
 
 # --- Main Application ---
 if dorado_results is not None:
