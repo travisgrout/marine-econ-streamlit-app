@@ -366,14 +366,6 @@ if dorado_results is not None:
                         </div>
                     """
                     st.markdown(legend_html, unsafe_allow_html=True)
-
-        # --- NEW: Expandable Section for Metric Details ---
-        metric_expander_title = f"{selected_display_metric} in Open ENOW"
-        with st.expander(metric_expander_title):
-            st.divider()
-            # Look up the description from the dictionary using the selected metric
-            description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
-            st.write(description)
         
         # --- Expandable Section for Sector Details ---
         st.markdown("---") # Visual separator
@@ -414,6 +406,14 @@ if dorado_results is not None:
                         use_container_width=True, 
                         hide_index=True
                     )
+                    
+        # --- Expandable Section for Metric Details ---
+        metric_expander_title = f"{selected_display_metric} in Open ENOW"
+        with st.expander(metric_expander_title):
+            st.divider()
+            # Look up the description from the dictionary using the selected metric
+            description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+            st.write(description)
 
 
     # --- Mode 2: Compare to ENOW ---
