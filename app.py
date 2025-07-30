@@ -68,8 +68,7 @@ def get_sector_colors(n):
     return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
 
 
-# --- UPDATED: Sector Descriptions and NAICS Tables ---
-# This dictionary holds the descriptive text and NAICS tables for each sector based on the provided document.
+# --- Data Dictionaries for Expanders ---
 SECTOR_DESCRIPTIONS = {
     "Living Resources": {
         "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life. This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets.",
@@ -150,6 +149,16 @@ SECTOR_DESCRIPTIONS = {
             {"NAICS Code": "722213", "Years": "2001 - 2011", "Description": "Snack and Nonalcoholic Beverage Bars"},
         ])
     }
+}
+
+# --- NEW: Dictionary for Metric Descriptions ---
+METRIC_DESCRIPTIONS = {
+    "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2017 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
+    "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates the number of establishments in the Louisiana Marine Transportation Sector based on QCEW data for four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline.",
+    "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) GDP by industry in current dollars (SAGDP2) table.",
+    "Real GDP": "Real GDP is reported in 2017 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) AReal GDP by industry in chained dollars (SAGDP9) table."
 }
 
 
@@ -299,18 +308,12 @@ if dorado_results is not None:
             else:
                 st.warning("No data available for the selected filters.")
         
-        # --- MODIFICATION START ---
-        # The entire "Map and Legend" section is restructured to handle both
-        # "All Coastal States" and individual state selections.
-        
         # --- Coastal Geographies Display ---
-        # First, determine the correct title for the expander based on the selection.
         if selected_state == "All Coastal States":
             expander_title = "Coastal Geographies in Open ENOW"
         else:
             expander_title = f"{selected_state} Coastal Geographies in Open ENOW"
         
-        # Apply custom styling for the expander title font size.
         st.markdown("""
             <style>
             div[data-testid="stExpander"] summary {
@@ -319,16 +322,12 @@ if dorado_results is not None:
             </style>
             """, unsafe_allow_html=True)
             
-        # Create the expander with the determined title.
         with st.expander(expander_title):
             st.divider()
             
-            # Now, display content inside the expander based on the selection.
             if selected_state == "All Coastal States":
-                # If "All Coastal States" is selected, show the informational text.
                 st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
             else:
-                # Otherwise, show the map and legend for the selected state.
                 st.markdown("""
                     <style>
                     div[data-testid="stHorizontalBlock"] {
@@ -367,7 +366,14 @@ if dorado_results is not None:
                         </div>
                     """
                     st.markdown(legend_html, unsafe_allow_html=True)
-        # --- MODIFICATION END ---
+
+        # --- NEW: Expandable Section for Metric Details ---
+        metric_expander_title = f"{selected_display_metric} in Open ENOW"
+        with st.expander(metric_expander_title):
+            st.divider()
+            # Look up the description from the dictionary using the selected metric
+            description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+            st.write(description)
         
         # --- Expandable Section for Sector Details ---
         st.markdown("---") # Visual separator
@@ -386,33 +392,23 @@ if dorado_results is not None:
                 with st.expander(expander_title):
                     st.divider() 
                     sector_info = SECTOR_DESCRIPTIONS[selected_sector]
-                    # The description text is already clean, so we can write it directly.
                     st.write(sector_info['description'])
                     
-                    # Define a function to apply multiple styles to the DataFrame rows
                     def style_naics_table(row):
-                        # Define the NAICS codes to highlight in yellow
-                        # Note: 713110 was listed twice, so we use the unique set.
                         highlight_codes = ["713110", "721199", "721214"]
-                        
-                        # Define styles
-                        yellow_style = 'background-color: #FFFF00' # Yellow
-                        gray_style = 'background-color: #f0f0f0'   # Light Gray
+                        yellow_style = 'background-color: #FFFF00'
+                        gray_style = 'background-color: #f0f0f0'
 
-                        # Condition 1: Highlight specific NAICS codes in yellow (takes precedence)
                         if row['NAICS Code'] in highlight_codes:
                             return [yellow_style for _ in row]
 
-                        # Condition 2: Highlight inactive year rows in gray
                         years_val = row['Years']
                         is_active = (years_val == "All years") or (years_val.endswith("- present"))
                         if not is_active:
                             return [gray_style for _ in row]
 
-                        # Default: No style for any other row
                         return ['' for _ in row]
 
-                    # Apply the styling function to the dataframe before displaying it
                     st.dataframe(
                         sector_info['table'].style.apply(style_naics_table, axis=1), 
                         use_container_width=True, 
