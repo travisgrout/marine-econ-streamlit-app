@@ -120,7 +120,7 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Tourism and Recreation": {
-        "description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation. This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations. It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks. Note that four of the codes used in this sector (highlighted in yellow below) are not in the original ENOW dataset.",
+        "description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation. This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations. It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks. Note that four of the codes used in this sector are not in the original ENOW dataset.",
         "table": pd.DataFrame([
             {"NAICS Code": "339920", "Years": "All years", "Description": "Sporting and Athletic Goods Manufacturing"},
             {"NAICS Code": "441222", "Years": "All years", "Description": "Boat Dealers"},
@@ -299,25 +299,36 @@ if dorado_results is not None:
             else:
                 st.warning("No data available for the selected filters.")
         
-        # --- Map and Legend Display ---
-        if selected_state != "All Coastal States":
-
-            st.markdown("""
-                <style>
-                div[data-testid="stExpander"] summary {
-                    font-size: 1.75rem;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-            
-            # --- MODIFICATION START ---
-            # Create a dynamic title for the expander using the selected state
+        # --- MODIFICATION START ---
+        # The entire "Map and Legend" section is restructured to handle both
+        # "All Coastal States" and individual state selections.
+        
+        # --- Coastal Geographies Display ---
+        # First, determine the correct title for the expander based on the selection.
+        if selected_state == "All Coastal States":
+            expander_title = "Coastal Geographies in Open ENOW"
+        else:
             expander_title = f"{selected_state} Coastal Geographies in Open ENOW"
+        
+        # Apply custom styling for the expander title font size.
+        st.markdown("""
+            <style>
+            div[data-testid="stExpander"] summary {
+                font-size: 1.75rem;
+            }
+            </style>
+            """, unsafe_allow_html=True)
             
-            with st.expander(expander_title):
-            # --- MODIFICATION END ---
-                st.divider()
-
+        # Create the expander with the determined title.
+        with st.expander(expander_title):
+            st.divider()
+            
+            # Now, display content inside the expander based on the selection.
+            if selected_state == "All Coastal States":
+                # If "All Coastal States" is selected, show the informational text.
+                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
+            else:
+                # Otherwise, show the map and legend for the selected state.
                 st.markdown("""
                     <style>
                     div[data-testid="stHorizontalBlock"] {
@@ -356,7 +367,7 @@ if dorado_results is not None:
                         </div>
                     """
                     st.markdown(legend_html, unsafe_allow_html=True)
-
+        # --- MODIFICATION END ---
         
         # --- Expandable Section for Sector Details ---
         st.markdown("---") # Visual separator
