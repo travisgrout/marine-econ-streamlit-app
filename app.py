@@ -257,7 +257,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     # --- Plotting and Visualization ---
     y_label_map = {
         "GDP (nominal)": "GDP ($ millions)",
-        "Real GDP": "Real GDP (millions of 2017 USD)",
+        "Real GDP": "Real GDP ($ millions, 2017)",
         "Wages (not inflation-adjusted)": "Wages ($ millions)",
         "Real Wages": "Real Wages ($ millions, 2017)",
         "Employment": "Employment (Number of Jobs)",
