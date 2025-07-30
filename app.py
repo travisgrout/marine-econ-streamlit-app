@@ -177,7 +177,7 @@ if dorado_results is not None:
     
     st.sidebar.image("open_ENOW_logo.png", width=200)
 
-    # --- START: CORRECTED CODE FOR POP-UP WINDOW ---
+    # --- START: CODE FOR POP-UP WINDOW ---
     popover = st.sidebar.popover("What is Open ENOW?")
     popover.markdown("""
 This web app is a proof of concept. It displays preliminary results from an attempt to use publicly-available data to track economic activity in six sectors that depend on the oceans and Great Lakes. The Open ENOW dataset currently covers 30 coastal states and the years 2001-2023. **Neither the results, nor the underlying methods, have undergone peer review.**
@@ -244,6 +244,10 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         step=1
     )
 
+    # --- Dynamic Title ---
+    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
+    st.title(plot_title)
+    
     # --- Base Data Filtering ---
     base_filtered_df = dorado_results[
         (dorado_results["Year"] >= year_range[0]) &
@@ -264,7 +268,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         "Establishments": "Establishments (Count)"
     }
     y_label = y_label_map.get(selected_display_metric, selected_display_metric)
-    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
     
     is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
     tooltip_format = '$,.0f' if is_currency else ',.0f'
