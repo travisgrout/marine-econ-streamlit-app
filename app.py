@@ -177,10 +177,9 @@ if dorado_results is not None:
     
     st.sidebar.image("open_ENOW_logo.png", width=200)
 
-    # --- START: NEW CODE FOR POP-UP WINDOW ---
-    if st.sidebar.button("What is Open ENOW?"):
-        with st.dialog("About Open ENOW"):
-            st.markdown("""
+    # --- START: NEW CODE FOR POP-UP WINDOW (Using st.popover) ---
+with st.sidebar.popover("What is Open ENOW?"):
+    st.markdown("""
 This web app displays preliminary results, derived from publicly-available data, to assist a technical review process. **It is NOT a U.S. government product.**
 
 Open ENOW is an experiment in using publicly-available data to track economic activity in six sectors that depend on the oceans and Great Lakes. This experimental web app displays draft estimates for the coastal portions of 30 U.S. states. The Open ENOW dataset currently covers the years 2001-2023.
@@ -196,8 +195,8 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 * Open ENOW draws on less detailed data than the original ENOW dataset and uses imputed values to fill in data gaps. As a result, it is less authoritative than the original ENOW dataset.
 * Open ENOW does not currently cover individual counties. The original ENOW dataset reports on marine economic activity in about 475 coastal U.S. counties.
 * Open ENOW reports on a slightly different set of employers than the original ENOW.
-            """)
-    # --- END: NEW CODE FOR POP-UP WINDOW ---
+    """)
+# --- END: NEW CODE FOR POP-UP WINDOW ---
 
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
