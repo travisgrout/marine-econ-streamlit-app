@@ -243,7 +243,16 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     )
 
     # --- Dynamic Title ---
-    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {selected_sector} Sector"
+    # Check if "All Sectors" is selected to build the title correctly
+    if selected_sector == "All Sectors":
+        # If so, don't add the extra word "Sector"
+        title_sector_part = selected_sector
+    else:
+        # Otherwise, add the word "Sector" after the specific sector name
+        title_sector_part = f"{selected_sector} Sector"
+    
+    # Construct the final title
+    plot_title = f"Marine Economy {selected_display_metric} in {selected_state} - {title_sector_part}"
     st.title(plot_title)
     
     # --- Base Data Filtering ---
