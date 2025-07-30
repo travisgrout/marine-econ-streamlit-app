@@ -164,8 +164,6 @@ METRIC_DESCRIPTIONS = {
 
 # --- Main Application ---
 if dorado_results is not None:
-    st.title("Marine Economy estimates: states and sectors")
-
     METRIC_MAP = {
         "Employment": "Employment",
         "Wages (not inflation-adjusted)": "Wages",
@@ -297,7 +295,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                         alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
                     ]
                 ).properties(
-                    title=plot_title,
+                    title= ,
                     height=500
                 ).configure_axis(
                     labelFontSize=14,
