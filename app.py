@@ -196,7 +196,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 * Open ENOW does not currently cover individual counties. The original ENOW dataset reports on marine economic activity in about 475 coastal U.S. counties.
 * Open ENOW reports on a slightly different set of employers than the original ENOW.
     """)
-# --- END: NEW CODE FOR POP-UP WINDOW ---
+    # --- END: NEW CODE FOR POP-UP WINDOW ---
 
     st.sidebar.header("Filters")
     plot_mode = st.sidebar.radio(
