@@ -289,4 +289,209 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     y=alt.Y('sum(Estimate_value):Q', title=y_label),
                     color=alt.Color('OceanSector:N', 
                                     scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
-                                    legend
+                                    legend=alt.Legend(title="Sectors")),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('OceanSector:N', title='Sector'),
+                        alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).properties(
+                    title=plot_title,
+                    height=500
+                ).configure_axis(
+                    labelFontSize=14,
+                    titleFontSize=16
+                ).configure_legend(
+                    symbolLimit=len(sorted_sector_names)
+                )
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.warning("No data available for the selected filters.")
+
+        else: # Single-sector chart
+            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
+            if not bar_df.empty:
+                sector_color = sector_color_map.get(selected_sector, "#808080")
+                chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('Estimate_value:Q', title=y_label),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).properties(
+                    title=plot_title,
+                    height=500
+                ).configure_axis(
+                    labelFontSize=14,
+                    titleFontSize=16
+                )
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.warning("No data available for the selected filters.")
+        
+        # --- Coastal Geographies Display ---
+        if selected_state == "All Coastal States":
+            expander_title = "Coastal Geographies in Open ENOW"
+        else:
+            expander_title = f"{selected_state} Coastal Geographies in Open ENOW"
+        
+        st.markdown("""
+            <style>
+            div[data-testid="stExpander"] summary {
+                font-size: 1.75rem;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+        with st.expander(expander_title):
+            st.divider()
+            
+            if selected_state == "All Coastal States":
+                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
+            else:
+                st.markdown("""
+                    <style>
+                    div[data-testid="stHorizontalBlock"] {
+                        align-items: center;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+                map_col, legend_col = st.columns([2, 1])
+
+                with map_col:
+                    map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
+
+                    if os.path.exists(map_filename):
+                        with st.container(border=True):
+                            st.image(map_filename, use_container_width=True)
+                    else:
+                        st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
+
+                with legend_col:
+                    st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                    
+                    legend_html = """
+                        <style>
+                            .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
+                            .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
+                            .legend-text { font-size: 1.1rem; }
+                        </style>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                            <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                            <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                        </div>
+                    """
+                    st.markdown(legend_html, unsafe_allow_html=True)
+        
+        # --- Expandable Section for Sector Details ---
+        if selected_sector == "All Sectors":
+            with st.expander("Marine Sectors in Open ENOW"):
+                st.write("""
+                Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
+                Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
+                Tourism and Recreation. For a detailed description of each sector, make a 
+                selection from the drop-down menu on the left.
+                """)
+        else:
+            if selected_sector in SECTOR_DESCRIPTIONS:
+                expander_title = f"The {selected_sector} Sector in Open ENOW"
+                with st.expander(expander_title):
+                    st.divider() 
+                    sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                    st.write(sector_info['description'])
+                    
+                    def style_naics_table(row):
+                        highlight_codes = ["713110", "721199", "721214"]
+                        yellow_style = 'background-color: #FFFF00'
+                        gray_style = 'background-color: #f0f0f0'
+
+                        if row['NAICS Code'] in highlight_codes:
+                            return [yellow_style for _ in row]
+
+                        years_val = row['Years']
+                        is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                        if not is_active:
+                            return [gray_style for _ in row]
+
+                        return ['' for _ in row]
+
+                    st.dataframe(
+                        sector_info['table'].style.apply(style_naics_table, axis=1), 
+                        use_container_width=True, 
+                        hide_index=True
+                    )
+                    
+        # --- Expandable Section for Metric Details ---
+        metric_expander_title = f"{selected_display_metric} in Open ENOW"
+        with st.expander(metric_expander_title):
+            st.divider()
+            # Look up the description from the dictionary using the selected metric
+            description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+            st.write(description)
+
+
+    # --- Mode 2: Compare to ENOW ---
+    elif plot_mode == "Compare to ENOW":
+        enow_metric_col = selected_metric_internal
+        nq_metric_col = f"NQ_{selected_metric_internal}"
+
+        plot_df = base_filtered_df[["Year", enow_metric_col, nq_metric_col]].copy()
+        plot_df.rename(columns={
+            enow_metric_col: "ENOW",
+            nq_metric_col: "Estimate from public QCEW"
+        }, inplace=True)
+        
+        if is_currency:
+            plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
+
+        compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
+        compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"], how='all', inplace=True)
+        
+        long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
+
+        if not long_form_df.empty:
+            base = alt.Chart(long_form_df).encode(
+                x=alt.X('Year:O', title='Year'),
+                y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+                color=alt.Color('Source:N', 
+                                scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
+                                legend=alt.Legend(title="Data Source", orient="bottom")),
+                tooltip=[
+                    alt.Tooltip('Year:O', title='Year'),
+                    alt.Tooltip('Source:N', title='Source'),
+                    alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)
+                ]
+            )
+            
+            line = base.mark_line()
+            points = base.mark_point(size=80, filled=True)
+            
+            chart = (line + points).properties(
+                title=plot_title,
+                height=500
+            ).configure_axis(
+                labelFontSize=14,
+                titleFontSize=16
+            ).interactive()
+
+            st.altair_chart(chart, use_container_width=True)
+
+            # --- Summary Statistics ---
+            diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
+            pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
+            summary_text = f"""
+            Mean Difference: {format_value(diff.mean(), selected_display_metric)}
+            Median Difference: {format_value(diff.median(), selected_display_metric)}
+            Mean Percent Difference: {pct_diff.mean():.2f}%
+            """
+            st.subheader("Summary Statistics")
+            st.code(summary_text, language='text')
+        else:
+            st.warning("No overlapping data available to compare for the selected filters.")
