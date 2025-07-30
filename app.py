@@ -310,7 +310,12 @@ if dorado_results is not None:
                 </style>
                 """, unsafe_allow_html=True)
             
-            with st.expander("Coastal geographies in Open ENOW"):
+            # --- MODIFICATION START ---
+            # Create a dynamic title for the expander using the selected state
+            expander_title = f"{selected_state} Coastal Geographies in Open ENOW"
+            
+            with st.expander(expander_title):
+            # --- MODIFICATION END ---
                 st.divider()
 
                 st.markdown("""
@@ -373,7 +378,6 @@ if dorado_results is not None:
                     # The description text is already clean, so we can write it directly.
                     st.write(sector_info['description'])
                     
-                    # --- MODIFICATION START ---
                     # Define a function to apply multiple styles to the DataFrame rows
                     def style_naics_table(row):
                         # Define the NAICS codes to highlight in yellow
@@ -403,7 +407,6 @@ if dorado_results is not None:
                         use_container_width=True, 
                         hide_index=True
                     )
-                    # --- MODIFICATION END ---
 
 
     # --- Mode 2: Compare to ENOW ---
