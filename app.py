@@ -339,11 +339,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                 source_df.dropna(subset=[nq_metric_col], inplace=True)
 
                 if not source_df.empty and source_df[nq_metric_col].sum() > 0:
-                    # --- CHART FORMATTING SETUP ---
-                    # Get the sector's base color for the bar outline
-                    sector_color = sector_color_map.get(selected_sector, "#808080")
-                    
-                    # --- DATA PREPARATION ---
                     # Rank states within each year to find the top contributors
                     source_df['rank'] = source_df.groupby('Year')[nq_metric_col].rank(method='first', ascending=False)
                     
@@ -354,9 +349,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     plot_df_states = source_df.groupby(['Year', 'StateContribution'])[nq_metric_col].sum().reset_index()
                     plot_df_states.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
                     
-                    # Add a column to control the stacking order ('All Other States' on bottom)
-                    plot_df_states['stack_order'] = np.where(plot_df_states['StateContribution'] == 'All Other States', 0, 1)
-
                     if is_currency:
                         plot_df_states["Estimate_value"] /= 1e6
                         
@@ -364,20 +356,13 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     unique_contributors = sorted([c for c in plot_df_states['StateContribution'].unique() if c != 'All Other States'])
                     legend_order = unique_contributors + ['All Other States']
 
-                    # --- CHART CREATION ---
-                    chart = alt.Chart(plot_df_states).mark_bar(
-                        stroke=sector_color,  # Add outline color
-                        strokeWidth=1.5        # Make outline visible
-                    ).encode(
+                    # Create the stacked bar chart
+                    chart = alt.Chart(plot_df_states).mark_bar().encode(
                         x=alt.X('Year:O', title='Year'),
                         y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
-                        # Set stacking order so 'All Other States' is on the bottom
-                        order=alt.Order('stack_order:N'),
                         color=alt.Color('StateContribution:N',
                                         legend=alt.Legend(title="State Contribution", orient="right"),
-                                        sort=legend_order,
-                                        # Use a sequential color scheme for the bar segments
-                                        scale=alt.Scale(scheme='blues')), 
+                                        sort=legend_order),
                         tooltip=[
                             alt.Tooltip('Year:O', title='Year'),
                             alt.Tooltip('StateContribution:N', title='Contribution'),
@@ -393,8 +378,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 
                     # --- Data Download for State Contribution Chart ---
                     download_df = plot_df_states.rename(columns={'Estimate_value': y_label, 'StateContribution': 'State Contribution'})
-                    # We don't need the helper 'stack_order' column in the download
-                    download_df = download_df.drop(columns=['stack_order'])
                     csv_data = convert_df_to_csv(download_df)
                     file_name = f"By_State_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
                     st.download_button(
@@ -424,6 +407,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                             alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
                         ]
                     ).properties(
+                        # title=plot_title, # Title is already displayed via st.title
                         height=500
                     ).configure_axis(
                         labelFontSize=14,
@@ -592,6 +576,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             points = base.mark_point(size=80, filled=True)
             
             chart = (line + points).properties(
+                # title=plot_title, # Title is already displayed via st.title
                 height=500
             ).configure_axis(
                 labelFontSize=14,
