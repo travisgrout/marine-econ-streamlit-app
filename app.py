@@ -288,14 +288,15 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     if plot_mode == "Estimates from Public QCEW Data":
         nq_metric_col = f"NQ_{selected_metric_internal}"
         
-        plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
-        plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
-        plot_df.dropna(subset=["Estimate_value"], inplace=True)
-        
-        if is_currency:
-            plot_df["Estimate_value"] /= 1e6
-
+        # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
         if selected_sector == "All Marine Sectors":
+            plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
+            plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+            plot_df.dropna(subset=["Estimate_value"], inplace=True)
+            
+            if is_currency:
+                plot_df["Estimate_value"] /= 1e6
+            
             if not plot_df.empty:
                 chart = alt.Chart(plot_df).mark_bar().encode(
                     x=alt.X('Year:O', title='Year'),
@@ -315,55 +316,123 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     symbolLimit=len(sorted_sector_names)
                 )
                 st.altair_chart(chart, use_container_width=True)
-            else:
-                st.warning("No data available for the selected filters.")
 
-        else: # Single-sector chart
-            bar_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
-            if not bar_df.empty:
-                sector_color = sector_color_map.get(selected_sector, "#808080")
-                chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
-                    x=alt.X('Year:O', title='Year'),
-                    y=alt.Y('Estimate_value:Q', title=y_label),
-                    tooltip=[
-                        alt.Tooltip('Year:O', title='Year'),
-                        alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
-                    ]
-                ).properties(
-                    title=plot_title,
-                    height=500
-                ).configure_axis(
-                    labelFontSize=14,
-                    titleFontSize=16
-                )
-                st.altair_chart(chart, use_container_width=True)
-            else:
-                st.warning("No data available for the selected filters.")
-        
-        # --- Data Download Section ---
-        if not plot_df.empty:
-            # Prepare data for download to match the chart's aggregation level
-            if selected_sector == "All Marine Sectors":
+                # --- Data Download for All Sectors Chart ---
                 download_df = plot_df.groupby(['Year', 'OceanSector'])['Estimate_value'].sum().reset_index()
+                download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+                csv_data = convert_df_to_csv(download_df)
+                file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                st.download_button(
+                   label="📥 Download Selected Data as CSV",
+                   data=csv_data,
+                   file_name=file_name,
+                   mime='text/csv',
+                )
             else:
-                download_df = plot_df.groupby("Year")["Estimate_value"].sum().reset_index()
-                download_df.insert(1, 'OceanSector', selected_sector) # Add sector context
+                st.warning("No data available for the selected filters.")
 
-            # Rename the value column to be descriptive (e.g., "GDP ($ millions)")
-            download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+        # CASE 2 & 3: A SINGLE MARINE SECTOR IS SELECTED
+        else:
+            # CASE 2: SINGLE SECTOR, ALL COASTAL STATES (STACKED BY STATE)
+            if selected_state == "All Coastal States":
+                source_df = base_filtered_df[['Year', 'GeoName', nq_metric_col]].copy()
+                source_df.dropna(subset=[nq_metric_col], inplace=True)
 
-            csv_data = convert_df_to_csv(download_df)
-            
-            # Create a dynamic filename based on user filters
-            file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                if not source_df.empty and source_df[nq_metric_col].sum() > 0:
+                    # Rank states within each year to find the top contributors
+                    source_df['rank'] = source_df.groupby('Year')[nq_metric_col].rank(method='first', ascending=False)
+                    
+                    # Group states outside the top 3 into 'All Other States'
+                    source_df['StateContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], 'All Other States')
 
-            st.download_button(
-               label="📥 Download Selected Data as CSV",
-               data=csv_data,
-               file_name=file_name,
-               mime='text/csv',
-            )
+                    # Aggregate data for plotting
+                    plot_df_states = source_df.groupby(['Year', 'StateContribution'])[nq_metric_col].sum().reset_index()
+                    plot_df_states.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+                    
+                    if is_currency:
+                        plot_df_states["Estimate_value"] /= 1e6
+                        
+                    # Define a consistent sort order for the legend
+                    unique_contributors = sorted([c for c in plot_df_states['StateContribution'].unique() if c != 'All Other States'])
+                    legend_order = unique_contributors + ['All Other States']
+
+                    # Create the stacked bar chart
+                    chart = alt.Chart(plot_df_states).mark_bar().encode(
+                        x=alt.X('Year:O', title='Year'),
+                        y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
+                        color=alt.Color('StateContribution:N',
+                                        legend=alt.Legend(title="State Contribution", orient="right"),
+                                        sort=legend_order),
+                        tooltip=[
+                            alt.Tooltip('Year:O', title='Year'),
+                            alt.Tooltip('StateContribution:N', title='Contribution'),
+                            alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                        ]
+                    ).configure_axis(
+                        labelFontSize=14,
+                        titleFontSize=16
+                    ).configure_legend(
+                        symbolLimit=31 
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+
+                    # --- Data Download for State Contribution Chart ---
+                    download_df = plot_df_states.rename(columns={'Estimate_value': y_label, 'StateContribution': 'State Contribution'})
+                    csv_data = convert_df_to_csv(download_df)
+                    file_name = f"By_State_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                    st.download_button(
+                        label="📥 Download State Contribution Data as CSV",
+                        data=csv_data,
+                        file_name=file_name,
+                        mime='text/csv',
+                    )
+                else:
+                    st.warning("No data available for the selected filters.")
+
+            # CASE 3: SINGLE SECTOR, SINGLE STATE (SIMPLE BAR CHART)
+            else: 
+                bar_df = base_filtered_df.groupby("Year")[nq_metric_col].sum().reset_index()
+                bar_df.rename(columns={nq_metric_col: 'Estimate_value'}, inplace=True)
+                
+                if not bar_df.empty:
+                    if is_currency:
+                        bar_df["Estimate_value"] /= 1e6
+                    
+                    sector_color = sector_color_map.get(selected_sector, "#808080")
+                    chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
+                        x=alt.X('Year:O', title='Year'),
+                        y=alt.Y('Estimate_value:Q', title=y_label),
+                        tooltip=[
+                            alt.Tooltip('Year:O', title='Year'),
+                            alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                        ]
+                    ).properties(
+                        # title=plot_title, # Title is already displayed via st.title
+                        height=500
+                    ).configure_axis(
+                        labelFontSize=14,
+                        titleFontSize=16
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+
+                    # --- Data Download for Single Sector/State Chart ---
+                    download_df = bar_df
+                    download_df.insert(1, 'OceanSector', selected_sector) 
+                    download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+                    csv_data = convert_df_to_csv(download_df)
+                    file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                    st.download_button(
+                       label="📥 Download Selected Data as CSV",
+                       data=csv_data,
+                       file_name=file_name,
+                       mime='text/csv',
+                    )
+                else:
+                    st.warning("No data available for the selected filters.")
         
+        # --- Expandable sections appear below all charts in this mode ---
+        st.divider()
+
         # --- Coastal Geographies Display ---
         if selected_state == "All Coastal States":
             expander_title = "Coastal Geographies in Open ENOW"
@@ -507,7 +576,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             points = base.mark_point(size=80, filled=True)
             
             chart = (line + points).properties(
-                title=plot_title,
+                # title=plot_title, # Title is already displayed via st.title
                 height=500
             ).configure_axis(
                 labelFontSize=14,
