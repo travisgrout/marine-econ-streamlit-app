@@ -162,4 +162,470 @@ SECTOR_DESCRIPTIONS = {
 
 # --- Dictionary for Metric Descriptions ---
 METRIC_DESCRIPTIONS = {
-    "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 483
+    "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2017 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
+    "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates the number of establishments in the Louisiana Marine Transportation Sector based on QCEW data for four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline.",
+    "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) GDP by industry in current dollars (SAGDP2) table.",
+    "Real GDP": "Real GDP is reported in 2017 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) AReal GDP by industry in chained dollars (SAGDP9) table."
+}
+
+
+# --- Main Application ---
+if dorado_results is not None:
+    METRIC_MAP = {
+        "Employment": "Employment",
+        "Wages (not inflation-adjusted)": "Wages",
+        "Real Wages": "RealWages",
+        "Establishments": "Establishments",
+        "GDP (nominal)": "GDP",
+        "Real GDP": "RealGDP"
+    }
+    
+    st.sidebar.image("open_ENOW_logo.png", width=200)
+
+    # --- START: CODE FOR POP-UP WINDOW ---
+    popover = st.sidebar.popover("What is Open ENOW?")
+    popover.markdown("""
+This web app is a proof of concept. It displays preliminary results from an attempt to use publicly-available data to track economic activity in six sectors that depend on the oceans and Great Lakes. The Open ENOW dataset currently covers 30 coastal states and the years 2001-2023. **Neither the results, nor the underlying methods, have undergone peer review.**
+
+**How is Open ENOW different from the original ENOW dataset?**
+
+Open ENOW will, if developed into a publicly-released product, bridge a temporary gap in the Economics: National Ocean Watch (ENOW) dataset. The original ENOW dataset draws on establishment-level microdata collected by the Bureau of Labor Statistics (BLS). Due to resource constraints, BLS cannot currently support updates to the ENOW dataset. 
+
+The original ENOW dataset includes the data years 2005-2021. It does not capture substantial growth and changes in the ocean and Great Lakes economies since 2021 and, without annual updates, will become less and less relevant to users who want to understand current conditions and trends in marine economies. Open ENOW addresses this problem by creating “ENOW-like” estimates from public Quarterly Census of Employment and Wages (QCEW) data.
+
+Open ENOW covers the same states and economic sectors as the original ENOW and reports the same economic metrics. Like ENOW, it is a useful tool for understanding state, regional, and national marine economies. Understanding the type of economic activities that depend on the oceans and Great Lakes can help to guide planning, management, and policy decisions. However, Open ENOW is different from the original ENOW dataset in several important respects:
+
+* Open ENOW draws on less detailed data than the original ENOW dataset and uses imputed values to fill in data gaps. As a result, it is less authoritative than the original ENOW dataset.
+* Open ENOW does not currently cover individual counties. The original ENOW dataset reports on marine economic activity in about 475 coastal U.S. counties.
+* Open ENOW reports on a slightly different set of employers than the original ENOW.
+""")
+    # --- END: CODE FOR POP-UP WINDOW ---
+
+    st.sidebar.header("Filters")
+    plot_mode = st.sidebar.radio(
+        "Display Mode:",
+        ("Estimates from Public QCEW Data", "Compare to ENOW"),
+        index=0
+    )
+
+    geo_names = dorado_results["GeoName"].dropna().unique()
+    unique_states = ["All Coastal States"] + sorted(geo_names)
+
+    ocean_sectors = dorado_results["OceanSector"].dropna().unique()
+    unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+    
+    sorted_sector_names = sorted(ocean_sectors)
+    colors_list = get_sector_colors(len(sorted_sector_names))
+    sector_color_map = dict(zip(sorted_sector_names, colors_list))
+
+    if plot_mode == "Estimates from Public QCEW Data":
+        metric_choices = list(METRIC_MAP.keys())
+    else:
+        compare_metrics = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
+        metric_choices = list(compare_metrics.keys())
+
+    selected_state = st.sidebar.selectbox("Select State:", unique_states)
+    selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
+    selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+    selected_metric_internal = METRIC_MAP[selected_display_metric]
+
+    min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
+    
+    # Set the default year range based on the selected plot mode.
+    if plot_mode == "Estimates from Public QCEW Data":
+        default_start_year = max(min_year, 2014)
+        default_end_year = min(max_year, 2024)
+        default_range = (default_start_year, default_end_year)
+    else:  # "Compare to ENOW"
+        default_start_year = max(min_year, 2012)
+        default_end_year = min(max_year, 2021)
+        default_range = (default_start_year, default_end_year)
+        
+    year_range = st.sidebar.slider(
+        "Select Year Range:",
+        min_value=min_year,
+        max_value=max_year,
+        value=default_range,
+        step=1
+    )
+
+    # --- Dynamic Title ---
+    if selected_sector == "All Marine Sectors":
+        title_sector_part = selected_sector
+    else:
+        title_sector_part = f"{selected_sector} Sector"
+    
+    plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_state}"
+    st.title(plot_title)
+    
+    # --- Base Data Filtering ---
+    base_filtered_df = dorado_results[
+        (dorado_results["Year"] >= year_range[0]) &
+        (dorado_results["Year"] <= year_range[1])
+    ]
+    if selected_state != "All Coastal States":
+        base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_state]
+    if selected_sector != "All Marine Sectors":
+        base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
+
+    # --- Plotting and Visualization ---
+    y_label_map = {
+        "GDP (nominal)": "GDP ($ millions)",
+        "Real GDP": "Real GDP ($ millions, 2017)",
+        "Wages (not inflation-adjusted)": "Wages ($ millions)",
+        "Real Wages": "Real Wages ($ millions, 2017)",
+        "Employment": "Employment (Number of Jobs)",
+        "Establishments": "Establishments (Count)"
+    }
+    y_label = y_label_map.get(selected_display_metric, selected_display_metric)
+    
+    is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
+    tooltip_format = '$,.0f' if is_currency else ',.0f'
+
+    # --- Mode 1: Estimates from Public QCEW Data ---
+    if plot_mode == "Estimates from Public QCEW Data":
+        nq_metric_col = f"NQ_{selected_metric_internal}"
+        
+        # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
+        if selected_sector == "All Marine Sectors":
+            plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
+            plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+            plot_df.dropna(subset=["Estimate_value"], inplace=True)
+            
+            if is_currency:
+                plot_df["Estimate_value"] /= 1e6
+            
+            if not plot_df.empty:
+                chart = alt.Chart(plot_df).mark_bar().encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('sum(Estimate_value):Q', title=y_label),
+                    color=alt.Color('OceanSector:N', 
+                                    scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
+                                    legend=alt.Legend(title="Sectors")),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('OceanSector:N', title='Sector'),
+                        alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).configure_axis(
+                    labelFontSize=14,
+                    titleFontSize=16
+                ).configure_legend(
+                    symbolLimit=len(sorted_sector_names)
+                )
+                st.altair_chart(chart, use_container_width=True)
+
+                # --- Data Download for All Sectors Chart ---
+                download_df = plot_df.groupby(['Year', 'OceanSector'])['Estimate_value'].sum().reset_index()
+                download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+                csv_data = convert_df_to_csv(download_df)
+                file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                st.download_button(
+                   label="📥 Download Selected Data as CSV",
+                   data=csv_data,
+                   file_name=file_name,
+                   mime='text/csv',
+                )
+            else:
+                st.warning("No data available for the selected filters.")
+
+        # CASE 2 & 3: A SINGLE MARINE SECTOR IS SELECTED
+        else:
+            # CASE 2: SINGLE SECTOR, ALL COASTAL STATES (STACKED BY STATE)
+            if selected_state == "All Coastal States":
+                source_df = base_filtered_df[['Year', 'GeoName', nq_metric_col]].copy()
+                source_df.dropna(subset=[nq_metric_col], inplace=True)
+
+                if not source_df.empty and source_df[nq_metric_col].sum() > 0:
+                    # Rank states within each year to find the top contributors
+                    source_df['rank'] = source_df.groupby('Year')[nq_metric_col].rank(method='first', ascending=False)
+                    
+                    # Group states outside the top 3 into 'All Other States'
+                    source_df['StateContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], 'All Other States')
+
+                    # Aggregate data for plotting
+                    plot_df_states = source_df.groupby(['Year', 'StateContribution'])[nq_metric_col].sum().reset_index()
+                    plot_df_states.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+                    
+                    if is_currency:
+                        plot_df_states["Estimate_value"] /= 1e6
+                        
+                    # --- START: MODIFIED CODE BLOCK ---
+                    
+                    # Define the custom color palette for states
+                    state_color_palette = ["#1EBEC7", "#C06CBA", "#FFAB38", "#76BC21", "#737BE6", "#F5EB29", "#DB2207"]
+                    other_states_color = "#A5AAAF"
+
+                    # Get unique states, sorted alphabetically, excluding 'All Other States'
+                    unique_contributors = sorted([c for c in plot_df_states['StateContribution'].unique() if c != 'All Other States'])
+                    
+                    # Define the sort order. Putting 'All Other States' last makes it the bottom of the stack in Altair.
+                    sort_order = unique_contributors + ['All Other States']
+                    
+                    # Create the domain and range for the custom color scale
+                    color_domain = sort_order
+                    color_range = state_color_palette[:len(unique_contributors)] + [other_states_color]
+
+                    # Create the stacked bar chart with custom sorting and colors
+                    chart = alt.Chart(plot_df_states).mark_bar().encode(
+                        x=alt.X('Year:O', title='Year'),
+                        y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
+                        color=alt.Color('StateContribution:N',
+                                        legend=alt.Legend(title="State Contribution", orient="right"),
+                                        sort=sort_order, # Controls legend and stack order
+                                        scale=alt.Scale(domain=color_domain, range=color_range) # Applies custom colors
+                                       ),
+                        tooltip=[
+                            alt.Tooltip('Year:O', title='Year'),
+                            alt.Tooltip('StateContribution:N', title='Contribution'),
+                            alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                        ]
+                    ).configure_axis(
+                        labelFontSize=14,
+                        titleFontSize=16
+                    ).configure_legend(
+                        symbolLimit=31 
+                    )
+                    # --- END: MODIFIED CODE BLOCK ---
+                    
+                    st.altair_chart(chart, use_container_width=True)
+
+                    # --- Data Download for State Contribution Chart ---
+                    download_df = plot_df_states.rename(columns={'Estimate_value': y_label, 'StateContribution': 'State Contribution'})
+                    csv_data = convert_df_to_csv(download_df)
+                    file_name = f"By_State_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                    st.download_button(
+                        label="📥 Download State Contribution Data as CSV",
+                        data=csv_data,
+                        file_name=file_name,
+                        mime='text/csv',
+                    )
+                else:
+                    st.warning("No data available for the selected filters.")
+
+            # CASE 3: SINGLE SECTOR, SINGLE STATE (SIMPLE BAR CHART)
+            else: 
+                bar_df = base_filtered_df.groupby("Year")[nq_metric_col].sum().reset_index()
+                bar_df.rename(columns={nq_metric_col: 'Estimate_value'}, inplace=True)
+                
+                if not bar_df.empty:
+                    if is_currency:
+                        bar_df["Estimate_value"] /= 1e6
+                    
+                    sector_color = sector_color_map.get(selected_sector, "#808080")
+                    chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
+                        x=alt.X('Year:O', title='Year'),
+                        y=alt.Y('Estimate_value:Q', title=y_label),
+                        tooltip=[
+                            alt.Tooltip('Year:O', title='Year'),
+                            alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                        ]
+                    ).properties(
+                        # title=plot_title, # Title is already displayed via st.title
+                        height=500
+                    ).configure_axis(
+                        labelFontSize=14,
+                        titleFontSize=16
+                    )
+                    st.altair_chart(chart, use_container_width=True)
+
+                    # --- Data Download for Single Sector/State Chart ---
+                    download_df = bar_df
+                    download_df.insert(1, 'OceanSector', selected_sector) 
+                    download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+                    csv_data = convert_df_to_csv(download_df)
+                    file_name = f"{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                    st.download_button(
+                       label="📥 Download Selected Data as CSV",
+                       data=csv_data,
+                       file_name=file_name,
+                       mime='text/csv',
+                    )
+                else:
+                    st.warning("No data available for the selected filters.")
+        
+        # --- Expandable sections appear below all charts in this mode ---
+        st.divider()
+
+        # --- Coastal Geographies Display ---
+        if selected_state == "All Coastal States":
+            expander_title = "Coastal Geographies in Open ENOW"
+        else:
+            expander_title = f"{selected_state} Coastal Geographies in Open ENOW"
+        
+        st.markdown("""
+            <style>
+            div[data-testid="stExpander"] summary {
+                font-size: 1.75rem;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+        with st.expander(expander_title):
+            st.divider()
+            
+            if selected_state == "All Coastal States":
+                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
+            else:
+                st.markdown("""
+                    <style>
+                    div[data-testid="stHorizontalBlock"] {
+                        align-items: center;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+
+                map_col, legend_col = st.columns([2, 1])
+
+                with map_col:
+                    map_filename = f"ENOW state maps/Map_{selected_state.replace(' ', '_')}.jpg"
+
+                    if os.path.exists(map_filename):
+                        with st.container(border=True):
+                            st.image(map_filename, use_container_width=True)
+                    else:
+                        st.warning(f"Map for {selected_state} not found. Looked for: {map_filename}")
+
+                with legend_col:
+                    st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                    
+                    legend_html = """
+                        <style>
+                            .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
+                            .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
+                            .legend-text { font-size: 1.1rem; }
+                        </style>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                            <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                            <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                        </div>
+                    """
+                    st.markdown(legend_html, unsafe_allow_html=True)
+        
+        # --- Expandable Section for Sector Details ---
+        if selected_sector == "All Marine Sectors":
+            with st.expander("Marine Sectors in Open ENOW"):
+                st.divider()
+                st.write("""
+                Open ENOW tracks six economic sectors: Living Resources, Marine Construction, 
+                Marine Transportation, Offshore Mineral Resources, Ship and Boat Building, and 
+                Tourism and Recreation. For a detailed description of each sector, make a 
+                selection from the drop-down menu on the left.
+                """)
+        else:
+            if selected_sector in SECTOR_DESCRIPTIONS:
+                expander_title = f"The {selected_sector} Sector in Open ENOW"
+                with st.expander(expander_title):
+                    st.divider() 
+                    sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                    st.write(sector_info['description'])
+                    
+                    def style_naics_table(row):
+                        highlight_codes = ["713110", "721199", "721214"]
+                        yellow_style = 'background-color: #FFFF00'
+                        gray_style = 'background-color: #f0f0f0'
+
+                        if row['NAICS Code'] in highlight_codes:
+                            return [yellow_style for _ in row]
+
+                        years_val = row['Years']
+                        is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                        if not is_active:
+                            return [gray_style for _ in row]
+
+                        return ['' for _ in row]
+
+                    st.dataframe(
+                        sector_info['table'].style.apply(style_naics_table, axis=1), 
+                        use_container_width=True, 
+                        hide_index=True
+                    )
+                    
+        # --- Expandable Section for Metric Details ---
+        metric_expander_title = f"{selected_display_metric} in Open ENOW"
+        with st.expander(metric_expander_title):
+            st.divider()
+            description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+            st.write(description)
+
+
+    # --- Mode 2: Compare to ENOW ---
+    elif plot_mode == "Compare to ENOW":
+        enow_metric_col = selected_metric_internal
+        nq_metric_col = f"NQ_{selected_metric_internal}"
+
+        plot_df = base_filtered_df[["Year", enow_metric_col, nq_metric_col]].copy()
+        plot_df.rename(columns={
+            enow_metric_col: "ENOW",
+            nq_metric_col: "Estimate from public QCEW"
+        }, inplace=True)
+        
+        if is_currency:
+            plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
+
+        compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
+        compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"], how='all', inplace=True)
+        
+        long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
+
+        if not long_form_df.empty:
+            base = alt.Chart(long_form_df).encode(
+                x=alt.X('Year:O', title='Year'),
+                y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+                color=alt.Color('Source:N', 
+                                scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
+                                legend=alt.Legend(title="Data Source", orient="bottom")),
+                tooltip=[
+                    alt.Tooltip('Year:O', title='Year'),
+                    alt.Tooltip('Source:N', title='Source'),
+                    alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)
+                ]
+            )
+            
+            line = base.mark_line()
+            points = base.mark_point(size=80, filled=True)
+            
+            chart = (line + points).properties(
+                # title=plot_title, # Title is already displayed via st.title
+                height=500
+            ).configure_axis(
+                labelFontSize=14,
+                titleFontSize=16
+            ).interactive()
+
+            st.altair_chart(chart, use_container_width=True)
+
+            # --- NEW: Data Download Section ---
+            st.divider()
+            
+            csv_data_compare = convert_df_to_csv(compare_df)
+            
+            # Create a dynamic filename
+            file_name_compare = f"Comparison_{selected_state.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+
+            st.download_button(
+               label="📥 Download Comparison Data as CSV",
+               data=csv_data_compare,
+               file_name=file_name_compare,
+               mime='text/csv',
+            )
+            
+            # --- Summary Statistics ---
+            diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
+            pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
+            summary_text = f"""
+            Mean Difference: {format_value(diff.mean(), selected_display_metric)}
+            Median Difference: {format_value(diff.median(), selected_display_metric)}
+            Mean Percent Difference: {pct_diff.mean():.2f}%
+            """
+            st.subheader("Summary Statistics")
+            st.code(summary_text, language='text')
+        else:
+            st.warning("No overlapping data available to compare for the selected filters.")
