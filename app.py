@@ -236,7 +236,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     # Set the default year range based on the selected plot mode.
     if plot_mode == "Estimates from Public QCEW Data":
         default_start_year = max(min_year, 2014)
-        default_end_year = min(max_year, 2023)
+        default_end_year = min(max_year, 2024)
         default_range = (default_start_year, default_end_year)
     else:  # "Compare to ENOW"
         default_start_year = max(min_year, 2012)
