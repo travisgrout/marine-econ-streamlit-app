@@ -355,7 +355,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     # --- START: MODIFIED CODE BLOCK ---
                     
                     # Define the custom color palette for states
-                    state_color_palette = ["#1EBEC7", "#C06CBA", "#FFAB38", "#76BC21", "#737BE6", "#F5EB29", "#DB2207"]
+                    state_color_palette = ["#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77", "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9", "#009E73", "#F0E442"]
                     other_states_color = "#A5AAAF"
 
                     # Get unique states, sorted alphabetically, excluding 'All Other States'
@@ -366,7 +366,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     
                     # Create the domain and range for the custom color scale
                     color_domain = sort_order
-                    color_range = base_colors[:len(unique_contributors)] + [other_states_color]
+                    color_range = state_color_palette[:len(unique_contributors)] + [other_states_color]
 
                     # Create the stacked bar chart with custom sorting and colors
                     chart = alt.Chart(plot_df_states).mark_bar().encode(
