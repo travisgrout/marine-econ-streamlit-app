@@ -366,7 +366,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     
                     # Create the domain and range for the custom color scale
                     color_domain = sort_order
-                    color_range = state_color_palette[:len(unique_contributors)] + [other_states_color]
+                    color_range = base_colors[:len(unique_contributors)] + [other_states_color]
 
                     # Create the stacked bar chart with custom sorting and colors
                     chart = alt.Chart(plot_df_states).mark_bar().encode(
