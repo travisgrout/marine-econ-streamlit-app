@@ -164,10 +164,10 @@ SECTOR_DESCRIPTIONS = {
 METRIC_DESCRIPTIONS = {
     "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
     "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
-    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2017 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
+    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2024 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
     "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates the number of establishments in the Louisiana Marine Transportation Sector based on QCEW data for four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline.",
     "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) GDP by industry in current dollars (SAGDP2) table.",
-    "Real GDP": "Real GDP is reported in 2017 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) AReal GDP by industry in chained dollars (SAGDP9) table."
+    "Real GDP": "Real GDP is reported in 2024 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) AReal GDP by industry in chained dollars (SAGDP9) table."
 }
 
 
@@ -286,9 +286,9 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     # --- Plotting and Visualization ---
     y_label_map = {
         "GDP (nominal)": "GDP ($ millions)",
-        "Real GDP": "Real GDP ($ millions, 2017)",
+        "Real GDP": "Real GDP ($ millions, 2024)",
         "Wages (not inflation-adjusted)": "Wages ($ millions)",
-        "Real Wages": "Real Wages ($ millions, 2017)",
+        "Real Wages": "Real Wages ($ millions, 2024)",
         "Employment": "Employment (Number of Jobs)",
         "Establishments": "Establishments (Count)"
     }
