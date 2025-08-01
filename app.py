@@ -233,7 +233,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 
     min_year, max_year = int(dorado_results["Year"].min()), int(dorado_results["Year"].max())
     
-    # --- START: MODIFIED CODE BLOCK ---
     # Set the default year range based on the selected plot mode.
     if plot_mode == "Estimates from Public QCEW Data":
         # Default to the last 10 years of available data.
@@ -244,7 +243,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         default_start_year = max(min_year, 2012)
         default_end_year = min(max_year, 2021)
         default_range = (default_start_year, default_end_year)
-    # --- END: MODIFIED CODE BLOCK ---
         
     year_range = st.sidebar.slider(
         "Select Year Range:",
@@ -262,7 +260,19 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     
     plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_state}"
     st.title(plot_title)
+
+    # --- START: NEW CODE BLOCK FOR GDP BANNER ---
+    is_gdp_metric = selected_display_metric in ["GDP (nominal)", "Real GDP"]
     
+    if is_gdp_metric:
+        gdp_col_to_check = f"NQ_{selected_metric_internal}"
+        # Check if all GDP values for the max_year are null/NaN
+        gdp_is_missing_for_max_year = dorado_results.loc[dorado_results['Year'] == max_year, gdp_col_to_check].isnull().all()
+        
+        if gdp_is_missing_for_max_year:
+            st.info(f"💡 GDP estimates are not yet available for {max_year}.")
+    # --- END: NEW CODE BLOCK ---
+
     # --- Base Data Filtering ---
     base_filtered_df = dorado_results[
         (dorado_results["Year"] >= year_range[0]) &
