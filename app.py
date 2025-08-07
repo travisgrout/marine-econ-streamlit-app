@@ -67,7 +67,7 @@ def get_sector_colors(n):
     ]
     return base_colors[:n] if n <= len(base_colors) else alt.themes.get().schemes['tableau20'][:n]
 
-# --- NEW: Function to convert DataFrame to CSV ---
+# --- Function to convert DataFrame to CSV ---
 @st.cache_data
 def convert_df_to_csv(df):
     """
@@ -261,7 +261,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_state}"
     st.title(plot_title)
 
-    # --- START: NEW CODE BLOCK FOR GDP BANNER ---
+    # --- START: CODE BLOCK FOR GDP BANNER ---
     is_gdp_metric = selected_display_metric in ["GDP (nominal)", "Real GDP"]
     
     if is_gdp_metric:
@@ -271,7 +271,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
         
         if gdp_is_missing_for_max_year:
             st.info(f"💡 GDP estimates are not yet available for {max_year}.")
-    # --- END: NEW CODE BLOCK ---
+    # --- END: GDP BANNER CODE BLOCK ---
 
     # --- Base Data Filtering ---
     base_filtered_df = dorado_results[
@@ -364,9 +364,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     
                     if is_currency:
                         plot_df_states["Estimate_value"] /= 1e6
-                        
-                    # --- START: MODIFIED CODE BLOCK ---
-                    
+                                           
                     # Define the custom color palette for states
                     state_color_palette = ["#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77", "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9", "#009E73", "#F0E442"]
                     other_states_color = "#A5AAAF"
@@ -401,7 +399,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     ).configure_legend(
                         symbolLimit=31 
                     )
-                    # --- END: MODIFIED CODE BLOCK ---
                     
                     st.altair_chart(chart, use_container_width=True)
 
@@ -569,6 +566,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 
 
     # --- Mode 2: Compare to ENOW ---
+    # THIS MODE IS INTENDED FOR INTERNAL REVIEWERS RATHER THAN END USERS
     elif plot_mode == "Compare to ENOW":
         enow_metric_col = selected_metric_internal
         nq_metric_col = f"NQ_{selected_metric_internal}"
@@ -614,7 +612,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 
             st.altair_chart(chart, use_container_width=True)
 
-            # --- NEW: Data Download Section ---
+            # --- Data Download Section ---
             st.divider()
             
             csv_data_compare = convert_df_to_csv(compare_df)
@@ -642,3 +640,4 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             st.code(summary_text, language='text')
         else:
             st.warning("No overlapping data available to compare for the selected filters.")
+
