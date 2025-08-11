@@ -319,12 +319,12 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                 
                 # Define the text templates for each metric
                 summary_text_templates = {
-                    "Employment": f"<strong>{formatted_value}</strong> people were employed in the selected sector(s) in <strong>{latest_year}</strong>.",
-                    "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
-                    "Real Wages": f"Workers in the selected sector(s) earned <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
-                    "Establishments": f"There were <strong>{formatted_value}</strong> establishments in the selected sector(s) in <strong>{latest_year}</strong>.",
-                    "GDP (nominal)": f"The selected sector(s) contributed <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong>.",
-                    "Real GDP": f"The selected sector(s) contributed <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
+                    "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed in the selected sector(s) in <strong>{latest_year}</strong>.",
+                    "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
+                    "Real Wages": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
+                    "Establishments": f"There were about <strong>{formatted_value}</strong> establishments in the selected sector(s) in <strong>{latest_year}</strong>.",
+                    "GDP (nominal)": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong>.",
+                    "Real GDP": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
                 }
                 summary_message = summary_text_templates.get(selected_display_metric)
         # --- END: LATEST YEAR SUMMARY CALCULATION ---
@@ -676,4 +676,5 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             st.code(summary_text, language='text')
         else:
             st.warning("No overlapping data available to compare for the selected filters.")
+
 
