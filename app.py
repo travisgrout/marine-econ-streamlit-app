@@ -599,7 +599,7 @@ if plot_mode in estimate_modes:
         
         # --- Logic for Regional Mode ---
         if plot_mode == "Regional Estimates from Public QCEW Data":
-            st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties/zip codes of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
+            st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
         
         # --- ORIGINAL: Logic for State Mode ---
         elif plot_mode == "State Estimates from Public QCEW Data":
@@ -765,6 +765,7 @@ elif plot_mode == "Compare to original ENOW":
         st.code(summary_text, language='text')
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
