@@ -258,16 +258,20 @@ if plot_mode == "Estimates from Public QCEW Data":
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
         st.stop()
+    # **MODIFICATION**: Filter for states only to populate the dropdown
+    states_only_df = active_df[active_df['GeoScale'] == 'State']
+    geo_names = states_only_df["GeoName"].dropna().unique()
+
 else:  # "Compare to ENOW"
     active_df = dorado_data
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `DORADO_combined_sectors.csv` is in the same directory as the app.")
         st.stop()
+    # Original behavior for this mode
+    geo_names = active_df["GeoName"].dropna().unique()
 
 # --- Dynamically create sidebar filters from the active dataframe ---
-geo_names = active_df["GeoName"].dropna().unique()
 unique_states = ["All Coastal States"] + sorted(geo_names)
-
 ocean_sectors = active_df["OceanSector"].dropna().unique()
 unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
 
@@ -329,14 +333,26 @@ if is_gdp_metric:
 # --- END: GDP BANNER CODE BLOCK ---
 
 # --- Base Data Filtering ---
+# First, filter by year range
 base_filtered_df = active_df[
     (active_df["Year"] >= year_range[0]) &
     (active_df["Year"] <= year_range[1])
 ]
-if selected_state != "All Coastal States":
+
+# **MODIFICATION**: Handle geography filtering with new logic
+if selected_state == "All Coastal States":
+    # For estimates mode, ensure we only sum states to avoid double counting regions
+    if plot_mode == "Estimates from Public QCEW Data":
+        base_filtered_df = base_filtered_df[base_filtered_df['GeoScale'] == 'State']
+    # For "Compare" mode, no change is needed; it includes everything by default
+else:
+    # Filter for the specific state selected by the user
     base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_state]
+
+# Then, filter by sector
 if selected_sector != "All Marine Sectors":
     base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
+
 
 # --- Plotting and Visualization ---
 y_label_map = {
