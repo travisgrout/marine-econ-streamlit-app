@@ -300,6 +300,34 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
     # --- Mode 1: Estimates from Public QCEW Data ---
     if plot_mode == "Estimates from Public QCEW Data":
         nq_metric_col = f"NQ_{selected_metric_internal}"
+
+        # --- START: LATEST YEAR SUMMARY CALCULATION ---
+        summary_message = None
+        # Use the end of the selected year range as the most recent year
+        latest_year = year_range[1]
+        
+        # Filter data for the most recent year in the slider range
+        latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
+
+        # Calculate the total value if data for that year exists
+        if not latest_year_data.empty:
+            latest_value = latest_year_data[nq_metric_col].sum()
+
+            # Proceed if the value is a valid number and greater than zero
+            if pd.notna(latest_value) and latest_value > 0:
+                formatted_value = format_value(latest_value, selected_display_metric)
+                
+                # Define the text templates for each metric
+                summary_text_templates = {
+                    "Employment": f"**{formatted_value}** people were employed in the selected sector(s) in **{latest_year}**.",
+                    "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned **{formatted_value}** in total annual wages in **{latest_year}**.",
+                    "Real Wages": f"Workers in the selected sector(s) earned **{formatted_value}** in total annual wages in **{latest_year}**, adjusted for inflation.",
+                    "Establishments": f"There were **{formatted_value}** establishments in the selected sector(s) in **{latest_year}**.",
+                    "GDP (nominal)": f"The selected sector(s) contributed **{formatted_value}** to GDP in **{latest_year}**.",
+                    "Real GDP": f"The selected sector(s) contributed **{formatted_value}** to GDP in **{latest_year}** (in chained 2017 dollars)."
+                }
+                summary_message = summary_text_templates.get(selected_display_metric)
+        # --- END: LATEST YEAR SUMMARY CALCULATION ---
         
         # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
         if selected_sector == "All Marine Sectors":
@@ -364,7 +392,7 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                     
                     if is_currency:
                         plot_df_states["Estimate_value"] /= 1e6
-                                           
+                                            
                     # Define the custom color palette for states
                     state_color_palette = ["#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77", "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9", "#009E73", "#F0E442"]
                     other_states_color = "#A5AAAF"
@@ -456,6 +484,14 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
                 else:
                     st.warning("No data available for the selected filters.")
         
+        # --- START: DISPLAY LATEST YEAR SUMMARY TEXT ---
+        if summary_message:
+            st.markdown(
+                f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>",
+                unsafe_allow_html=True
+            )
+        # --- END: DISPLAY LATEST YEAR SUMMARY TEXT ---
+
         # --- Expandable sections appear below all charts in this mode ---
         st.divider()
 
@@ -640,5 +676,3 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
             st.code(summary_text, language='text')
         else:
             st.warning("No overlapping data available to compare for the selected filters.")
-
-
