@@ -16,7 +16,7 @@ st.set_page_config(
 def load_dorado_data():
     """
     Loads, cleans, and prepares the original combined dataset (DORADO).
-    This data is used for the "Compare to ENOW" mode, as it contains both
+    This data is used for the "Compare to original ENOW" mode, as it contains both
     official ENOW data and the older estimates.
     """
     try:
@@ -252,7 +252,7 @@ plot_mode = st.sidebar.radio(
     (
         "State Estimates from Public QCEW Data",
         "Regional Estimates from Public QCEW Data", # New mode added here
-        "Compare to ENOW"
+        "Compare to original ENOW"
     ),
     index=0
 )
@@ -283,7 +283,7 @@ if plot_mode in estimate_modes:
     unique_geos = [all_geo_label] + sorted(geo_names)
     # --- END: MODIFICATION FOR DYNAMIC GEOGRAPHY FILTER ---
 
-else:  # "Compare to ENOW"
+else:  # "Compare to original ENOW"
     active_df = dorado_data
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `DORADO_combined_sectors.csv` is in the same directory as the app.")
@@ -323,7 +323,7 @@ if plot_mode in estimate_modes:
     default_end_year = max_year
     default_start_year = max(min_year, max_year - 9) 
     default_range = (default_start_year, default_end_year)
-else:  # "Compare to ENOW" - This range is fixed by the ENOW dataset's availability
+else:  # "Compare to original ENOW" - This range is fixed by the ENOW dataset's availability
     default_start_year = max(min_year, 2012)
     default_end_year = min(max_year, 2021)
     default_range = (default_start_year, default_end_year)
@@ -693,8 +693,8 @@ if plot_mode in estimate_modes:
         st.write(description)
 
 
-# --- Mode 2: Compare to ENOW (Unchanged logic, but now an elif) ---
-elif plot_mode == "Compare to ENOW":
+# --- Mode 2: Compare to original ENOW (Unchanged logic, but now an elif) ---
+elif plot_mode == "Compare to original ENOW":
     enow_metric_col = selected_metric_internal
     nq_metric_col = f"NQ_{selected_metric_internal}"
 
@@ -765,3 +765,4 @@ elif plot_mode == "Compare to ENOW":
         st.code(summary_text, language='text')
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
