@@ -50,7 +50,7 @@ def load_dorado_data():
 def load_open_enow_data():
     """
     Loads, cleans, and prepares the new Open ENOW dataset from openENOWinput.csv.
-    This data is used for the "Estimates from Public QCEW Data" mode.
+    This data is used for the "State Estimates from Public QCEW Data" mode.
     """
     try:
         df = pd.read_csv("openENOWinput.csv")
@@ -248,12 +248,12 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 st.sidebar.header("Filters")
 plot_mode = st.sidebar.radio(
     "Display Mode:",
-    ("Estimates from Public QCEW Data", "Compare to ENOW"),
+    ("State Estimates from Public QCEW Data", "Compare to ENOW"),
     index=0
 )
 
 # --- Select Active DataFrame and Set Filters based on Mode ---
-if plot_mode == "Estimates from Public QCEW Data":
+if plot_mode == "State Estimates from Public QCEW Data":
     active_df = open_enow_data
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
@@ -279,7 +279,7 @@ sorted_sector_names = sorted(ocean_sectors)
 colors_list = get_sector_colors(len(sorted_sector_names))
 sector_color_map = dict(zip(sorted_sector_names, colors_list))
 
-if plot_mode == "Estimates from Public QCEW Data":
+if plot_mode == "State Estimates from Public QCEW Data":
     metric_choices = list(METRIC_MAP.keys())
 else:
     # "Real Wages" is not available in the original ENOW data for comparison
@@ -294,7 +294,7 @@ selected_metric_internal = METRIC_MAP[selected_display_metric]
 min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
 
 # Set the default year range based on the selected plot mode.
-if plot_mode == "Estimates from Public QCEW Data":
+if plot_mode == "State Estimates from Public QCEW Data":
     default_end_year = max_year
     default_start_year = max(min_year, max_year - 9) 
     default_range = (default_start_year, default_end_year)
@@ -342,7 +342,7 @@ base_filtered_df = active_df[
 # **MODIFICATION**: Handle geography filtering with new logic
 if selected_state == "All Coastal States":
     # For estimates mode, ensure we only sum states to avoid double counting regions
-    if plot_mode == "Estimates from Public QCEW Data":
+    if plot_mode == "State Estimates from Public QCEW Data":
         base_filtered_df = base_filtered_df[base_filtered_df['GeoScale'] == 'State']
     # For "Compare" mode, no change is needed; it includes everything by default
 else:
@@ -368,8 +368,8 @@ y_label = y_label_map.get(selected_display_metric, selected_display_metric)
 is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
 tooltip_format = '$,.0f' if is_currency else ',.0f'
 
-# --- Mode 1: Estimates from Public QCEW Data ---
-if plot_mode == "Estimates from Public QCEW Data":
+# --- Mode 1: State Estimates from Public QCEW Data ---
+if plot_mode == "State Estimates from Public QCEW Data":
     # The rest of this block remains largely the same, as it now operates on 
     # `base_filtered_df`, which is correctly sourced from `open_enow_data`.
     
@@ -736,3 +736,4 @@ elif plot_mode == "Compare to ENOW":
         st.code(summary_text, language='text')
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
