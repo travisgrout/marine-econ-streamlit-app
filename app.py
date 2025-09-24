@@ -4,6 +4,8 @@ import numpy as np
 import altair as alt
 from textwrap import wrap
 import os
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -20,7 +22,6 @@ def load_dorado_data():
     official ENOW data and the older estimates.
     """
     try:
-        # NOTE: This file is not provided, but the function is kept for the "Compare" mode.
         df = pd.read_csv("DORADO_combined_sectors.csv")
 
         # Rename columns for consistency
@@ -795,3 +796,4 @@ Mean Percent Difference: {pct_diff.mean():.2f}%
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
