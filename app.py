@@ -297,20 +297,27 @@ if plot_mode in estimate_modes:
         all_geo_label = None # No "all" option for counties
 
         state_label = "Select State:"
-        state_names = sorted(active_df['stateName'].dropna().unique())
-        selected_state = st.sidebar.selectbox(state_label, state_names)
+        # Ensure stateName column exists and is used for filtering
+        if 'stateName' in active_df.columns:
+            state_names = sorted(active_df['stateName'].dropna().unique())
+            selected_state = st.sidebar.selectbox(state_label, state_names)
 
-        county_label = "Select County:"
-        if selected_state:
-            county_names = sorted(
-                active_df[active_df['stateName'] == selected_state]['geoName'].dropna().unique()
-            )
-            selected_county = st.sidebar.selectbox(county_label, county_names)
+            county_label = "Select County:"
+            if selected_state:
+                # Filter by state before getting unique county names
+                county_names = sorted(
+                    active_df[active_df['stateName'] == selected_state]['GeoName'].dropna().unique()
+                )
+                selected_county = st.sidebar.selectbox(county_label, county_names)
+            else:
+                selected_county = st.sidebar.selectbox(county_label, [])
+
+            # Set selected_geo to the county for unified logic later
+            selected_geo = selected_county
         else:
-            selected_county = st.sidebar.selectbox(county_label, [])
-
-        # Set selected_geo to the county for unified logic later
-        selected_geo = selected_county
+            st.warning("The 'stateName' column is not available in the data for county estimates.")
+            selected_state = None
+            selected_county = None
 
 
     else: # Regional Estimates from Public QCEW Data
