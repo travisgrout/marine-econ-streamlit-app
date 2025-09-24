@@ -26,10 +26,26 @@ def load_comparison_data():
         # Filter for State-level data aggregated by Sector as requested
         df = df[(df['GeoScale'] == 'State') & (df['aggregation'] == 'Sector')].copy()
 
+        # Rename columns for consistency with open_enow_data
+        rename_dict = {
+            "Open_establishments": "Open_Establishments",
+            "Open_employment": "Open_Employment",
+            "Open_wages": "Open_Wages",
+            "Open_GDP": "Open_GDP",
+            "Open_RealGDP": "Open_RealGDP",
+            "oldENOW_establishments": "oldENOW_Establishments",
+            "oldENOW_employment": "oldENOW_Employment",
+            "oldENOW_wages": "oldENOW_Wages",
+            "oldENOW_GDP": "oldENOW_GDP",
+            "oldENOW_RealGDP": "oldENOW_RealGDP"
+        }
+        df.rename(columns=rename_dict, inplace=True)
+
+
         # Explicitly convert all potential metric columns to numeric types.
         metric_cols_to_convert = [
-            'Open_establishments', 'Open_employment', 'Open_wages', 'Open_GDP', 'Open_RealGDP',
-            'oldENOW_establishments', 'oldENOW_employment', 'oldENOW_wages', 'oldENOW_GDP', 'oldENOW_RealGDP'
+            'Open_Establishments', 'Open_Employment', 'Open_Wages', 'Open_GDP', 'Open_RealGDP',
+            'oldENOW_Establishments', 'oldENOW_Employment', 'oldENOW_Wages', 'oldENOW_GDP', 'oldENOW_RealGDP'
         ]
 
         for col in metric_cols_to_convert:
@@ -213,9 +229,10 @@ METRIC_DESCRIPTIONS = {
 
 # --- Main Application ---
 METRIC_MAP = {
-    "Employment": "employment",
-    "Wages (not inflation-adjusted)": "wages",
-    "Establishments": "establishments",
+    "Employment": "Employment",
+    "Wages (not inflation-adjusted)": "Wages",
+    "Real Wages": "RealWages",
+    "Establishments": "Establishments",
     "GDP (nominal)": "GDP",
     "Real GDP": "RealGDP"
 }
@@ -317,8 +334,8 @@ if plot_mode in estimate_modes:
         st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
         st.stop()
 
-    # This part of the code for 'estimate_modes' remains the same
     if plot_mode == "State Estimates from Public QCEW Data":
+        # Filter for State-level data aggregated by Sector
         active_df = active_df[(active_df['GeoScale'] == 'State') & (active_df['aggregation'] == 'Sector')].copy()
         geo_label = "Select State:"
         all_geo_label = "All Coastal States"
@@ -326,28 +343,39 @@ if plot_mode in estimate_modes:
         geo_names = active_df["GeoName"].dropna().unique()
         unique_geos = [all_geo_label] + sorted(geo_names)
         selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
+
     elif plot_mode == "County Estimates from Public QCEW Data":
+        # Filter for County-level data
         active_df = active_df[(active_df['geoType'] == 'County') & (active_df['aggregation'] == 'Sector')].copy()
         geo_filter_type = 'County'
-        all_geo_label = None
+        all_geo_label = None # No "all" option for counties
+
         state_label = "Select State:"
+        # Ensure stateName column exists and is used for filtering
         if 'stateName' in active_df.columns:
             state_names = sorted(active_df['stateName'].dropna().unique())
             selected_state = st.sidebar.selectbox(state_label, state_names)
+
             county_label = "Select County:"
             if selected_state:
+                # Filter by state before getting unique county names
                 county_names = sorted(
                     active_df[active_df['stateName'] == selected_state]['GeoName'].dropna().unique()
                 )
                 selected_county = st.sidebar.selectbox(county_label, county_names)
             else:
                 selected_county = st.sidebar.selectbox(county_label, [])
+
+            # Set selected_geo to the county for unified logic later
             selected_geo = selected_county
         else:
             st.warning("The 'stateName' column is not available in the data for county estimates.")
             selected_state = None
             selected_county = None
-    else: # Regional Estimates
+
+
+    else: # Regional Estimates from Public QCEW Data
+        # Filter for Region-level data aggregated by Sector
         active_df = active_df[(active_df['GeoScale'] == 'Region') & (active_df['aggregation'] == 'Sector')].copy()
         geo_label = "Select Region:"
         all_geo_label = "All Regions"
@@ -378,30 +406,14 @@ sorted_sector_names = sorted(ocean_sectors)
 colors_list = get_sector_colors(len(sorted_sector_names))
 sector_color_map = dict(zip(sorted_sector_names, colors_list))
 
-# In comparison mode, 'Real Wages' is not available
 if plot_mode == "Compare to original ENOW":
-    metric_choices = [k for k in METRIC_MAP.keys() if k != "Real Wages"]
+    # "Real Wages" is not available in the original ENOW data for comparison
+    metric_choices = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
 else:
-    metric_choices = list(METRIC_MAP.keys())
-    # Add 'Real Wages' back for other modes if it was removed
-    if 'Real Wages' not in metric_choices:
-        metric_choices.insert(2, 'Real Wages')
+    metric_choices = METRIC_MAP
 
-# Temporary fix for METRIC_MAP for other modes
-if plot_mode != "Compare to original ENOW":
-    METRIC_MAP_FULL = {
-        "Employment": "Employment",
-        "Wages (not inflation-adjusted)": "Wages",
-        "Real Wages": "RealWages",
-        "Establishments": "Establishments",
-        "GDP (nominal)": "GDP",
-        "Real GDP": "RealGDP"
-    }
-    selected_display_metric = st.sidebar.selectbox("Select Metric:", list(METRIC_MAP_FULL.keys()))
-    selected_metric_internal_key = METRIC_MAP_FULL[selected_display_metric]
-else:
-    selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
-    selected_metric_internal_key = METRIC_MAP[selected_display_metric]
+selected_display_metric = st.sidebar.selectbox("Select Metric:", list(metric_choices.keys()))
+selected_metric_internal = METRIC_MAP[selected_display_metric]
 
 
 min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
@@ -438,8 +450,8 @@ st.title(plot_title)
 
 # --- GDP Banner ---
 is_gdp_metric = selected_display_metric in ["GDP (nominal)", "Real GDP"]
-if is_gdp_metric and plot_mode != "Compare to original ENOW":
-    gdp_col_to_check = f"Open_{selected_metric_internal_key}"
+if is_gdp_metric:
+    gdp_col_to_check = f"Open_{selected_metric_internal}"
     if not active_df.empty:
         gdp_is_missing_for_max_year = active_df.loc[active_df['Year'] == max_year, gdp_col_to_check].isnull().all()
         if gdp_is_missing_for_max_year:
@@ -454,17 +466,23 @@ base_filtered_df = active_df[
 # --- Handle geography filtering ---
 if plot_mode == "County Estimates from Public QCEW Data":
     if selected_county and selected_state:
+        # The active_df is already filtered by geoType='County'. This filter selects the specific county.
         base_filtered_df = base_filtered_df[
             (base_filtered_df["GeoName"] == selected_county) &
             (base_filtered_df["stateName"] == selected_state)
         ]
     else:
+        # If no county is selected, the dataframe should be empty to prevent plotting errors
         base_filtered_df = pd.DataFrame()
+
 elif all_geo_label and selected_geo == all_geo_label:
+    # Handles "All Coastal States" and "All Regions". The `active_df` is already correctly filtered.
     pass
 else:
+    # Filter for the specific geography (state or region) selected by the user
     base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_geo]
 
+# Then, filter by sector
 if selected_sector != "All Marine Sectors":
     base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
@@ -485,27 +503,232 @@ tooltip_format = '$,.0f' if is_currency else ',.0f'
 # --- Logic for State, County, and Regional Estimate Modes ---
 if plot_mode in estimate_modes:
 
-    # The logic for these modes remains largely unchanged.
-    # We will assume 'open_enow_data' has columns like 'Open_Employment', etc.
-    # The METRIC_MAP_FULL and selected_metric_internal_key will handle this.
-    open_metric_col = f"Open_{selected_metric_internal_key}"
-    
-    # ... [The rest of the logic for the estimate modes from your original script goes here] ...
-    # This includes the LATEST YEAR SUMMARY, and the three cases for plotting:
-    # 1. ALL MARINE SECTORS (STACKED BY SECTOR)
-    # 2. SINGLE SECTOR, ALL GEOGRAPHIES (STACKED BY STATE/REGION)
-    # 3. SINGLE SECTOR, SINGLE GEOGRAPHY (SIMPLE BAR CHART)
-    # Plus the summary text and expanders.
-    # For brevity, this large, unchanged block is omitted here, but it should be
-    # copied back from your original script.
+    open_metric_col = f"Open_{selected_metric_internal}"
 
-    pass # Placeholder for the large block of unchanged code.
+    # --- LATEST YEAR SUMMARY CALCULATION ---
+    summary_message = None
+    latest_year = year_range[1]
 
+    latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
 
-# --- Mode 2: Compare to original ENOW (REVISED LOGIC) ---
+    if not latest_year_data.empty:
+        latest_value = latest_year_data[open_metric_col].sum()
+
+        if pd.notna(latest_value) and latest_value > 0:
+            formatted_value = format_value(latest_value, selected_display_metric)
+
+            summary_text_templates = {
+                "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed in the selected sector(s) in <strong>{latest_year}</strong>.",
+                "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
+                "Real Wages": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
+                "Establishments": f"There were about <strong>{formatted_value}</strong> establishments in the selected sector(s) in <strong>{latest_year}</strong>.",
+                "GDP (nominal)": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong>.",
+                "Real GDP": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
+            }
+            summary_message = summary_text_templates.get(selected_display_metric)
+
+    # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
+    if selected_sector == "All Marine Sectors":
+        plot_df = base_filtered_df[["Year", "OceanSector", open_metric_col]].copy()
+        plot_df.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
+        plot_df.dropna(subset=["Estimate_value"], inplace=True)
+
+        if is_currency:
+            plot_df["Estimate_value"] /= 1e6
+
+        if not plot_df.empty:
+            chart = alt.Chart(plot_df).mark_bar().encode(
+                x=alt.X('Year:O', title='Year'),
+                y=alt.Y('sum(Estimate_value):Q', title=y_label),
+                color=alt.Color('OceanSector:N',
+                                scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
+                                legend=alt.Legend(title="Sectors")),
+                tooltip=[
+                    alt.Tooltip('Year:O', title='Year'),
+                    alt.Tooltip('OceanSector:N', title='Sector'),
+                    alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)
+                ]
+            ).configure_axis(
+                labelFontSize=14,
+                titleFontSize=16
+            ).configure_legend(
+                symbolLimit=len(sorted_sector_names)
+            )
+            st.altair_chart(chart, use_container_width=True)
+
+            # Data Download
+            download_df = plot_df.groupby(['Year', 'OceanSector'])['Estimate_value'].sum().reset_index()
+            download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+            csv_data = convert_df_to_csv(download_df)
+            file_name = f"{selected_geo.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+            st.download_button(
+                label="📥 Download Selected Data as CSV",
+                data=csv_data,
+                file_name=file_name,
+                mime='text/csv',
+            )
+        else:
+            st.warning("No data available for the selected filters.")
+
+    # CASE 2 & 3: A SINGLE MARINE SECTOR IS SELECTED
+    else:
+        # CASE 2: SINGLE SECTOR, ALL GEOGRAPHIES (STACKED BY STATE/REGION)
+        if all_geo_label and selected_geo == all_geo_label:
+            source_df = base_filtered_df[['Year', 'GeoName', open_metric_col]].copy()
+            source_df.dropna(subset=[open_metric_col], inplace=True)
+
+            if not source_df.empty and source_df[open_metric_col].sum() > 0:
+                source_df['rank'] = source_df.groupby('Year')[open_metric_col].rank(method='first', ascending=False)
+
+                other_geo_text = f"All Other {geo_filter_type}s"
+                source_df['GeoContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], other_geo_text)
+
+                plot_df_geos = source_df.groupby(['Year', 'GeoContribution'])[open_metric_col].sum().reset_index()
+                plot_df_geos.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
+
+                if is_currency:
+                    plot_df_geos["Estimate_value"] /= 1e6
+
+                geo_color_palette = ["#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77", "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9", "#009E73", "#F0E442"]
+                other_geos_color = "#A5AAAF"
+                unique_contributors = sorted([c for c in plot_df_geos['GeoContribution'].unique() if c != other_geo_text])
+                sort_order = unique_contributors + [other_geo_text]
+                color_domain = sort_order
+                color_range = geo_color_palette[:len(unique_contributors)] + [other_geos_color]
+
+                chart = alt.Chart(plot_df_geos).mark_bar().encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
+                    color=alt.Color('GeoContribution:N',
+                                    legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"),
+                                    sort=sort_order,
+                                    scale=alt.Scale(domain=color_domain, range=color_range)),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('GeoContribution:N', title='Contribution'),
+                        alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).configure_axis(
+                    labelFontSize=14,
+                    titleFontSize=16
+                ).configure_legend(
+                    symbolLimit=31
+                )
+
+                st.altair_chart(chart, use_container_width=True)
+
+                # Data Download
+                download_df = plot_df_geos.rename(columns={'Estimate_value': y_label, 'GeoContribution': f'{geo_filter_type} Contribution'})
+                csv_data = convert_df_to_csv(download_df)
+                file_name = f"By_{geo_filter_type}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                st.download_button(
+                    label=f"📥 Download {geo_filter_type} Contribution Data as CSV",
+                    data=csv_data,
+                    file_name=file_name,
+                    mime='text/csv',
+                )
+            else:
+                st.warning("No data available for the selected filters.")
+
+        # CASE 3: SINGLE SECTOR, SINGLE GEOGRAPHY (SIMPLE BAR CHART)
+        else:
+            bar_df = base_filtered_df.groupby("Year")[open_metric_col].sum().reset_index()
+            bar_df.rename(columns={open_metric_col: 'Estimate_value'}, inplace=True)
+
+            if not bar_df.empty:
+                if is_currency:
+                    bar_df["Estimate_value"] /= 1e6
+
+                sector_color = sector_color_map.get(selected_sector, "#808080")
+                chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
+                    x=alt.X('Year:O', title='Year'),
+                    y=alt.Y('Estimate_value:Q', title=y_label),
+                    tooltip=[
+                        alt.Tooltip('Year:O', title='Year'),
+                        alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)
+                    ]
+                ).properties(
+                    height=500
+                ).configure_axis(
+                    labelFontSize=14,
+                    titleFontSize=16
+                )
+                st.altair_chart(chart, use_container_width=True)
+
+                # Data Download
+                download_df = bar_df
+                download_df.insert(1, 'OceanSector', selected_sector)
+                download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
+                csv_data = convert_df_to_csv(download_df)
+                file_name = f"{selected_geo.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+                st.download_button(
+                    label="📥 Download Selected Data as CSV",
+                    data=csv_data,
+                    file_name=file_name,
+                    mime='text/csv',
+                )
+            else:
+                st.warning("No data available for the selected filters.")
+
+    # --- DISPLAY LATEST YEAR SUMMARY TEXT ---
+    if summary_message:
+        st.markdown(
+            f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>",
+            unsafe_allow_html=True
+        )
+
+    # --- Expandable sections ---
+    st.divider()
+
+    st.markdown("""
+        <style>
+        div[data-testid="stExpander"] summary {
+            font-size: 1.75rem;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+    expander_title = "Coastal Geographies in Open ENOW"
+    if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
+        expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
+
+    # Don't show the geography expander for county mode as it's not applicable
+    if plot_mode != "County Estimates from Public QCEW Data":
+        with st.expander(expander_title):
+            st.divider()
+
+            if plot_mode == "Regional Estimates from Public QCEW Data":
+                st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
+
+            elif plot_mode == "State Estimates from Public QCEW Data":
+                if selected_geo == "All Coastal States":
+                    st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
+                else:
+                    st.markdown("""<style>...</style>""", unsafe_allow_html=True)
+                    map_col, legend_col = st.columns([2, 1])
+                    with map_col:
+                        map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
+                        if os.path.exists(map_filename):
+                            with st.container(border=True):
+                                st.image(map_filename, use_container_width=True)
+                        else:
+                            st.warning(f"Map for {selected_geo} not found.")
+                    with legend_col:
+                        st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                        legend_html = """..."""
+                        st.markdown(legend_html, unsafe_allow_html=True)
+
+    # --- Expandable Section for Metric Details ---
+    metric_expander_title = f"{selected_display_metric} in Open ENOW"
+    with st.expander(metric_expander_title):
+        st.divider()
+        description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+        st.write(description)
+
+# --- Mode 2: Compare to original ENOW ---
 elif plot_mode == "Compare to original ENOW":
-    open_metric_col = f"Open_{selected_metric_internal_key}"
-    enow_metric_col = f"oldENOW_{selected_metric_internal_key}"
+    open_metric_col = f"Open_{selected_metric_internal}"
+    enow_metric_col = f"oldENOW_{selected_metric_internal}"
 
     plot_df = base_filtered_df[["Year", enow_metric_col, open_metric_col]].copy()
     plot_df.rename(columns={
