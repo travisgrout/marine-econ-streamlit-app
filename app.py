@@ -299,7 +299,7 @@ estimate_modes = [
 ]
 
 # Initialize variables to be used later
-selected_county = None
+selected_county_name = None
 selected_state = None
 geo_filter_type = None
 all_geo_label = None
@@ -339,16 +339,16 @@ if plot_mode in estimate_modes:
                 county_names = sorted(
                     active_df[active_df['stateName'] == selected_state]['GeoName'].dropna().unique()
                 )
-                selected_county = st.sidebar.selectbox(county_label, county_names)
+                selected_county_name = st.sidebar.selectbox(county_label, county_names)
             else:
-                selected_county = st.sidebar.selectbox(county_label, [])
+                selected_county_name = st.sidebar.selectbox(county_label, [])
 
             # Set selected_geo to the county for unified logic later
-            selected_geo = selected_county
+            selected_geo = selected_county_name
         else:
             st.warning("The 'stateName' column is not available in the data for county estimates.")
             selected_state = None
-            selected_county = None
+            selected_county_name = None
 
 
     else: # Regional Estimates from Public QCEW Data
@@ -389,8 +389,8 @@ if plot_mode in estimate_modes:
     # --- DYNAMIC TITLE FOR ESTIMATE MODES ---
     title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
     if plot_mode == "County Estimates from Public QCEW Data":
-        if selected_county and selected_state:
-            plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_county}, {selected_state}"
+        if selected_county_name and selected_state:
+            plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_county_name}, {selected_state}"
         else:
             plot_title = "Please select a state and county to view estimates"
     else:
@@ -411,9 +411,9 @@ if plot_mode in estimate_modes:
         (active_df["Year"] <= year_range[1])
     ]
     if plot_mode == "County Estimates from Public QCEW Data":
-        if selected_county and selected_state:
+        if selected_county_name and selected_state:
             base_filtered_df = base_filtered_df[
-                (base_filtered_df["GeoName"] == selected_county) &
+                (base_filtered_df["GeoName"] == selected_county_name) &
                 (base_filtered_df["stateName"] == selected_state)
             ]
         else:
@@ -437,8 +437,6 @@ if plot_mode in estimate_modes:
     
     open_metric_col = f"Open_{selected_metric_internal}"
     
-    # ... (Plotting logic for estimate modes starts here)
-    # This entire block for plotting and expanders in estimate modes is now included.
     summary_message = None
     latest_year = year_range[1]
     latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
@@ -516,8 +514,6 @@ if plot_mode in estimate_modes:
     if summary_message:
         st.markdown(f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>", unsafe_allow_html=True)
     
-    # --- EXPANDERS FOR ESTIMATE MODES ---
-    # ... (Expander logic is included here)
     st.divider()
     st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
     expander_title = "Coastal Geographies in Open ENOW"
@@ -601,35 +597,41 @@ else:  # "Compare to original ENOW"
     if selected_industry != "All Marine Industries":
         econ_title_part = selected_industry
 
-    if econ_title_part == "All Marine Sectors":
-        econ_title_part = "All Marine Sectors"
+    if econ_title_part == "All Marine Sectors" and geo_title_part != "All Coastal States":
+         econ_title_part = "All Marine Sectors"
+    elif econ_title_part == "All Marine Sectors" and geo_title_part == "All Coastal States":
+        econ_title_part = "the Marine Economy"
+
     
-    st.title(f"{selected_display_metric}: {econ_title_part} in {geo_title_part}")
+    st.title(f"{selected_display_metric} in {econ_title_part} in {geo_title_part}")
 
     # --- DATA FILTERING LOGIC ---
     base_filtered_df = active_df[
         (active_df["Year"] >= year_range[0]) & (active_df["Year"] <= year_range[1])
-    ]
+    ].copy()
+
+    # GEOGRAPHY FILTERING
     if selected_county != "All Coastal Counties":
         base_filtered_df = base_filtered_df[
             (base_filtered_df['GeoScale'] == 'County') & 
             (base_filtered_df['GeoName'] == selected_county)
         ]
-    elif selected_state_name != "All Coastal States":
-        if selected_industry != "All Marine Industries":
-             base_filtered_df = base_filtered_df[base_filtered_df['state'] == selected_state_abbr]
-        else:
-            base_filtered_df = base_filtered_df[
-                (base_filtered_df['GeoScale'] == 'State') & 
-                (base_filtered_df['GeoName'] == selected_state_name)
-            ]
+    else:
+        base_filtered_df = base_filtered_df[base_filtered_df['GeoScale'] == 'State']
+        if selected_state_name != "All Coastal States":
+            base_filtered_df = base_filtered_df[base_filtered_df['GeoName'] == selected_state_name]
+
+    # ECONOMIC AGGREGATION FILTERING
     if selected_industry != "All Marine Industries":
         base_filtered_df = base_filtered_df[
             (base_filtered_df['aggregation'] == 'Industry') &
             (base_filtered_df['OceanIndustry'] == selected_industry)
         ]
-    elif selected_sector != "All Marine Sectors":
-        base_filtered_df = base_filtered_df[base_filtered_df['OceanSector'] == selected_sector]
+    else:
+        base_filtered_df = base_filtered_df[base_filtered_df['aggregation'] == 'Sector']
+        if selected_sector != "All Marine Sectors":
+            base_filtered_df = base_filtered_df[base_filtered_df['OceanSector'] == selected_sector]
+
 
     # --- PLOTTING AND VISUALIZATION ---
     y_label_map = {"GDP (nominal)": "GDP ($ millions)", "Real GDP": "Real GDP ($ millions, 2017)", "Wages (not inflation-adjusted)": "Wages ($ millions)", "Employment": "Employment (Number of Jobs)", "Establishments": "Establishments (Count)"}
