@@ -255,7 +255,7 @@ if plot_mode in estimate_modes:
         geo_filter_type = 'State'
 
     else: # Regional Estimates from Public QCEW Data
-        # Filter for Region-level data aggregated by Industry
+        # Filter for Region-level data aggregated by Sector
         active_df = active_df[(active_df['GeoScale'] == 'Region') & (active_df['aggregation'] == 'Sector')].copy()
         geo_label = "Select Region:"
         all_geo_label = "All Regions"
@@ -658,5 +658,6 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
