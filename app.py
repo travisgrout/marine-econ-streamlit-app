@@ -589,7 +589,22 @@ if plot_mode in estimate_modes:
                         st.warning(f"Map for {selected_geo} not found.")
                 with legend_col:
                     st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
-                    legend_html = """..."""
+                    legend_html =  """
+                        <style>
+                            .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
+                            .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
+                            .legend-text { font-size: 1.1rem; }
+                        </style>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                            <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                            <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                        </div>
+                    """
+
                     st.markdown(legend_html, unsafe_allow_html=True)
     
         # --- Expandable Section for Metric Details ---
@@ -670,6 +685,7 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
