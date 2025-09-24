@@ -248,11 +248,9 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 """)
 # --- END: CODE FOR POP-UP WINDOW ---
 
-st.sidebar.header("Filters")
+st.sidebar.header("Display Mode:")
 
 # --- Custom Button Display Mode ---
-st.sidebar.markdown("Display Mode:")
-
 # Map button labels to plot_mode values
 button_map = {
     "States": "State Estimates from Public QCEW Data",
@@ -788,4 +786,5 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
