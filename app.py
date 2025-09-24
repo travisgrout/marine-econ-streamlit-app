@@ -219,8 +219,8 @@ METRIC_MAP = {
 }
 
 # --- MODIFIED: A placeholder image is used as the original is not available ---
-# st.sidebar.image("open_ENOW_logo.png", width=200)
-st.sidebar.markdown("### 🌊 Open ENOW")
+st.sidebar.image("open_ENOW_logo.png", width=200)
+# st.sidebar.markdown("### 🌊 Open ENOW")
 
 
 # --- START: CODE FOR POP-UP WINDOW (Unchanged) ---
@@ -593,4 +593,5 @@ if plot_mode in estimate_modes:
 elif plot_mode == "Compare to original ENOW":
     # (This entire section remains unchanged)
     pass # Placeholder for unchanged code
+
 
