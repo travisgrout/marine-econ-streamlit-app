@@ -199,12 +199,12 @@ SECTOR_DESCRIPTIONS = {
     }
 }
 METRIC_DESCRIPTIONS = {
-    "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW)...",
-    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW)...",
-    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2024 dollars...",
-    "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW)...",
-    "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA)...",
-    "Real GDP": "Real GDP is reported in 2017 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP..."
+    "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW)...",
+    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2024 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
+    "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates the number of establishments in the Louisiana Marine Transportation Sector based on QCEW data for four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline.",
+    "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) GDP by industry in current dollars (SAGDP2) table.",
+    "Real GDP": "Real GDP is reported in 2017 dollars. Open ENOW estimates a sector's contribution to Real GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) Real GDP by industry in chained dollars (SAGDP9) table."
 }
 
 
@@ -220,7 +220,7 @@ METRIC_MAP = {
 
 st.sidebar.image("open_ENOW_logo.png", width=200)
 
-# --- START: CODE FOR POP-UP WINDOW (Unchanged) ---
+# --- START: CODE FOR POP-UP WINDOW ---
 popover = st.sidebar.popover("What is Open ENOW?")
 popover.markdown("""
 This web app is a proof of concept...
@@ -241,7 +241,6 @@ plot_mode = st.sidebar.radio(
 # --- Select Active DataFrame and Set Filters based on Mode ---
 estimate_modes = ["State Estimates from Public QCEW Data", "Regional Estimates from Public QCEW Data"]
 
-# --- MODIFIED: The entire logic for selecting and filtering data for the estimate modes is updated here. ---
 if plot_mode in estimate_modes:
     active_df = open_enow_data
     if active_df is None:
@@ -342,7 +341,6 @@ base_filtered_df = active_df[
 
 # --- Handle geography filtering ---
 if selected_geo == all_geo_label:
-    # --- MODIFIED: This conditional check is no longer needed because active_df is pre-filtered. ---
     pass 
 else:
     # Filter for the specific geography (state or region) selected by the user
@@ -351,7 +349,6 @@ else:
 # Then, filter by sector
 if selected_sector != "All Marine Sectors":
     base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
-
 
 # --- Plotting and Visualization ---
 y_label_map = {
@@ -661,3 +658,4 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
