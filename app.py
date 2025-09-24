@@ -15,27 +15,27 @@ st.set_page_config(
 
 # --- Data Loading and Caching ---
 @st.cache_data
-def load_dorado_data():
+def load_comparison_data():
     """
     Loads, cleans, and prepares the original combined dataset (DORADO).
     This data is used for the "Compare to original ENOW" mode, as it contains both
     official ENOW data and the older estimates.
     """
     try:
-        df = pd.read_csv("DORADO_combined_sectors.csv")
+        df = pd.read_csv("enow_version_comparisons.csv")
 
         # Rename columns for consistency
         rename_dict = {
-            "NQ_establishments": "NQ_Establishments",
-            "NQ_employment": "NQ_Employment",
-            "NQ_wages": "NQ_Wages",
-            "NQ_rw": "NQ_RealWages",
+            "Open_establishments": "Open_Establishments",
+            "Open_employment": "Open_Employment",
+            "Open_wages": "Open_Wages",
+            "Open_rw": "Open_RealWages",
         }
         df.rename(columns=rename_dict, inplace=True)
 
         # Explicitly convert all potential metric columns to numeric types.
         metric_cols_to_convert = [
-            'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP',
+            'Open_Establishments', 'Open_Employment', 'Open_Wages', 'Open_RealWages', 'Open_GDP', 'Open_RealGDP',
             'Establishments', 'Employment', 'Wages', 'GDP', 'RealGDP'
         ]
 
@@ -63,12 +63,12 @@ def load_open_enow_data():
             "state": "StateAbbrv",
             "year": "Year",
             "enowSector": "OceanSector",
-            "establishments": "NQ_Establishments",
-            "employment": "NQ_Employment",
-            "wages": "NQ_Wages",
-            "real_wages": "NQ_RealWages",
-            "gdp": "NQ_GDP",
-            "rgdp": "NQ_RealGDP"
+            "establishments": "Open_Establishments",
+            "employment": "Open_Employment",
+            "wages": "Open_Wages",
+            "real_wages": "Open_RealWages",
+            "gdp": "Open_GDP",
+            "rgdp": "Open_RealGDP"
         }
         df.rename(columns=rename_dict, inplace=True)
 
@@ -83,7 +83,7 @@ def load_open_enow_data():
 
         # Explicitly convert metric columns to numeric types
         metric_cols_to_convert = [
-            'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP'
+            'Open_Establishments', 'Open_Employment', 'Open_Wages', 'Open_RealWages', 'Open_GDP', 'Open_RealGDP'
         ]
 
         for col in metric_cols_to_convert:
@@ -95,7 +95,7 @@ def load_open_enow_data():
         return None
 
 # Load both potential data sources
-dorado_data = load_dorado_data()
+comparison_data = load_comparison_data()
 open_enow_data = load_open_enow_data()
 
 # --- Helper Functions ---
@@ -376,9 +376,9 @@ if plot_mode in estimate_modes:
         selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
 
 else:  # "Compare to original ENOW"
-    active_df = dorado_data
+    active_df = comparison_data
     if active_df is None:
-        st.error("❌ **Data not found!** Please make sure `DORADO_combined_sectors.csv` is in the same directory as the app.")
+        st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory as the app.")
         st.stop()
 
     geo_label = "Select State:"
@@ -442,7 +442,7 @@ st.title(plot_title)
 # --- GDP Banner ---
 is_gdp_metric = selected_display_metric in ["GDP (nominal)", "Real GDP"]
 if is_gdp_metric:
-    gdp_col_to_check = f"NQ_{selected_metric_internal}"
+    gdp_col_to_check = f"Open_{selected_metric_internal}"
     if not active_df.empty:
         gdp_is_missing_for_max_year = active_df.loc[active_df['Year'] == max_year, gdp_col_to_check].isnull().all()
         if gdp_is_missing_for_max_year:
@@ -494,7 +494,7 @@ tooltip_format = '$,.0f' if is_currency else ',.0f'
 # --- Logic for State, County, and Regional Estimate Modes ---
 if plot_mode in estimate_modes:
 
-    nq_metric_col = f"NQ_{selected_metric_internal}"
+    open_metric_col = f"Open_{selected_metric_internal}"
 
     # --- LATEST YEAR SUMMARY CALCULATION ---
     summary_message = None
@@ -503,7 +503,7 @@ if plot_mode in estimate_modes:
     latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
 
     if not latest_year_data.empty:
-        latest_value = latest_year_data[nq_metric_col].sum()
+        latest_value = latest_year_data[open_metric_col].sum()
 
         if pd.notna(latest_value) and latest_value > 0:
             formatted_value = format_value(latest_value, selected_display_metric)
@@ -520,8 +520,8 @@ if plot_mode in estimate_modes:
 
     # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
     if selected_sector == "All Marine Sectors":
-        plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
-        plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+        plot_df = base_filtered_df[["Year", "OceanSector", open_metric_col]].copy()
+        plot_df.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
 
         if is_currency:
@@ -565,17 +565,17 @@ if plot_mode in estimate_modes:
     else:
         # CASE 2: SINGLE SECTOR, ALL GEOGRAPHIES (STACKED BY STATE/REGION)
         if all_geo_label and selected_geo == all_geo_label:
-            source_df = base_filtered_df[['Year', 'GeoName', nq_metric_col]].copy()
-            source_df.dropna(subset=[nq_metric_col], inplace=True)
+            source_df = base_filtered_df[['Year', 'GeoName', open_metric_col]].copy()
+            source_df.dropna(subset=[open_metric_col], inplace=True)
 
-            if not source_df.empty and source_df[nq_metric_col].sum() > 0:
-                source_df['rank'] = source_df.groupby('Year')[nq_metric_col].rank(method='first', ascending=False)
+            if not source_df.empty and source_df[open_metric_col].sum() > 0:
+                source_df['rank'] = source_df.groupby('Year')[open_metric_col].rank(method='first', ascending=False)
 
                 other_geo_text = f"All Other {geo_filter_type}s"
                 source_df['GeoContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], other_geo_text)
 
-                plot_df_geos = source_df.groupby(['Year', 'GeoContribution'])[nq_metric_col].sum().reset_index()
-                plot_df_geos.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
+                plot_df_geos = source_df.groupby(['Year', 'GeoContribution'])[open_metric_col].sum().reset_index()
+                plot_df_geos.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
 
                 if is_currency:
                     plot_df_geos["Estimate_value"] /= 1e6
@@ -623,8 +623,8 @@ if plot_mode in estimate_modes:
 
         # CASE 3: SINGLE SECTOR, SINGLE GEOGRAPHY (SIMPLE BAR CHART)
         else:
-            bar_df = base_filtered_df.groupby("Year")[nq_metric_col].sum().reset_index()
-            bar_df.rename(columns={nq_metric_col: 'Estimate_value'}, inplace=True)
+            bar_df = base_filtered_df.groupby("Year")[open_metric_col].sum().reset_index()
+            bar_df.rename(columns={open_metric_col: 'Estimate_value'}, inplace=True)
 
             if not bar_df.empty:
                 if is_currency:
@@ -721,12 +721,12 @@ if plot_mode in estimate_modes:
 # --- Mode 2: Compare to original ENOW (Unchanged logic, but now an elif) ---
 elif plot_mode == "Compare to original ENOW":
     enow_metric_col = selected_metric_internal
-    nq_metric_col = f"NQ_{selected_metric_internal}"
+    open_metric_col = f"Open_{selected_metric_internal}"
 
-    plot_df = base_filtered_df[["Year", enow_metric_col, nq_metric_col]].copy()
+    plot_df = base_filtered_df[["Year", enow_metric_col, open_metric_col]].copy()
     plot_df.rename(columns={
         enow_metric_col: "ENOW",
-        nq_metric_col: "Estimate from public QCEW"
+        open_metric_col: "Estimate from public QCEW"
     }, inplace=True)
 
     if is_currency:
@@ -796,4 +796,5 @@ Mean Percent Difference: {pct_diff.mean():.2f}%
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
