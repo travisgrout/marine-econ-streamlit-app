@@ -218,10 +218,7 @@ METRIC_MAP = {
     "Real GDP": "RealGDP"
 }
 
-# --- MODIFIED: A placeholder image is used as the original is not available ---
 st.sidebar.image("open_ENOW_logo.png", width=200)
-# st.sidebar.markdown("### 🌊 Open ENOW")
-
 
 # --- START: CODE FOR POP-UP WINDOW (Unchanged) ---
 popover = st.sidebar.popover("What is Open ENOW?")
@@ -586,12 +583,81 @@ if plot_mode in estimate_modes:
                     legend_html = """..."""
                     st.markdown(legend_html, unsafe_allow_html=True)
     
-    # --- Expandable Section for Sector Details ---
-    # (This section remains unchanged)
+        # --- Expandable Section for Metric Details ---
 
-# --- Mode 2: Compare to original ENOW ---
+    metric_expander_title = f"{selected_display_metric} in Open ENOW"
+    with st.expander(metric_expander_title):
+        st.divider()
+        description = METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available.")
+        st.write(description)
+
+
+# --- Mode 2: Compare to original ENOW (Unchanged logic, but now an elif) ---
 elif plot_mode == "Compare to original ENOW":
-    # (This entire section remains unchanged)
-    pass # Placeholder for unchanged code
+    enow_metric_col = selected_metric_internal
+    nq_metric_col = f"NQ_{selected_metric_internal}"
 
+    plot_df = base_filtered_df[["Year", enow_metric_col, nq_metric_col]].copy()
+    plot_df.rename(columns={
+        enow_metric_col: "ENOW",
+        nq_metric_col: "Estimate from public QCEW"
+    }, inplace=True)
+   
+    if is_currency:
+        plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
+    compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
+    compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"], how='all', inplace=True)
+    long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
 
+    if not long_form_df.empty:
+        base = alt.Chart(long_form_df).encode(
+            x=alt.X('Year:O', title='Year'),
+            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+            color=alt.Color('Source:N', 
+                            scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
+                            legend=alt.Legend(title="Data Source", orient="bottom")),
+            tooltip=[
+                alt.Tooltip('Year:O', title='Year'),
+                alt.Tooltip('Source:N', title='Source'),
+                alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)
+            ]
+        )
+
+        line = base.mark_line()
+        points = base.mark_point(size=80, filled=True)
+        chart = (line + points).properties(
+            height=500
+        ).configure_axis(
+            labelFontSize=14,
+            titleFontSize=16
+        ).interactive()
+
+        st.altair_chart(chart, use_container_width=True)
+        
+        # --- Data Download Section ---
+        st.divider()
+        csv_data_compare = convert_df_to_csv(compare_df)
+        file_name_compare = f"Comparison_{selected_geo.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
+
+        st.download_button(
+           label="📥 Download Comparison Data as CSV",
+           data=csv_data_compare,
+           file_name=file_name_compare,
+           mime='text/csv',
+        )
+
+        # --- Summary Statistics ---
+        diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
+        pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
+        summary_text = f"""
+
+        Mean Difference: {format_value(diff.mean(), selected_display_metric)}
+        Median Difference: {format_value(diff.median(), selected_display_metric)}
+        Mean Percent Difference: {pct_diff.mean():.2f}%
+        """
+
+        st.subheader("Summary Statistics")
+        st.code(summary_text, language='text')
+
+    else:
+        st.warning("No overlapping data available to compare for the selected filters.")
