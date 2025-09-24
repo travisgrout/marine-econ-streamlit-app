@@ -260,7 +260,7 @@ if plot_mode in estimate_modes:
 
     else: # Regional Estimates from Public QCEW Data
         # Filter for Region-level data aggregated by Industry
-        active_df = active_df[(active_df['GeoScale'] == 'Region') & (active_df['aggregation'] == 'Industry')].copy()
+        active_df = active_df[(active_df['GeoScale'] == 'Region') & (active_df['aggregation'] == 'Sector')].copy()
         geo_label = "Select Region:"
         all_geo_label = "All Regions"
         geo_filter_type = 'Region'
@@ -593,3 +593,4 @@ if plot_mode in estimate_modes:
 elif plot_mode == "Compare to original ENOW":
     # (This entire section remains unchanged)
     pass # Placeholder for unchanged code
+
