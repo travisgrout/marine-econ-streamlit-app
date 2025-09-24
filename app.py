@@ -22,26 +22,26 @@ def load_dorado_data():
     try:
         # NOTE: This file is not provided, but the function is kept for the "Compare" mode.
         df = pd.read_csv("DORADO_combined_sectors.csv")
-        
+
         # Rename columns for consistency
         rename_dict = {
             "NQ_establishments": "NQ_Establishments",
             "NQ_employment": "NQ_Employment",
             "NQ_wages": "NQ_Wages",
-            "NQ_rw": "NQ_RealWages", 
+            "NQ_rw": "NQ_RealWages",
         }
         df.rename(columns=rename_dict, inplace=True)
-        
+
         # Explicitly convert all potential metric columns to numeric types.
         metric_cols_to_convert = [
             'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP',
             'Establishments', 'Employment', 'Wages', 'GDP', 'RealGDP'
         ]
-        
+
         for col in metric_cols_to_convert:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-                
+
         return df
     except FileNotFoundError:
         return None
@@ -50,11 +50,11 @@ def load_dorado_data():
 def load_open_enow_data():
     """
     Loads, cleans, and prepares the new Open ENOW dataset from openENOWinput.csv.
-    This data is used for the "State Estimates" and "Regional Estimates" modes.
+    This data is used for the "State Estimates", "County Estimates", and "Regional Estimates" modes.
     """
     try:
         df = pd.read_csv("openENOWinput.csv")
-        
+
         # Rename columns to match the app's expected internal names
         rename_dict = {
             "geoType": "GeoScale",
@@ -71,15 +71,24 @@ def load_open_enow_data():
         }
         df.rename(columns=rename_dict, inplace=True)
         
+        # The geoType column from the CSV is renamed to GeoScale, but we still need the original for county filtering.
+        # Let's read the original column again to ensure it exists for our logic.
+        df_original = pd.read_csv("openENOWinput.csv")
+        if 'geoType' in df_original.columns:
+            df['geoType'] = df_original['geoType']
+        if 'stateName' in df_original.columns:
+            df['stateName'] = df_original['stateName']
+
+
         # Explicitly convert metric columns to numeric types
         metric_cols_to_convert = [
             'NQ_Establishments', 'NQ_Employment', 'NQ_Wages', 'NQ_RealWages', 'NQ_GDP', 'NQ_RealGDP'
         ]
-        
+
         for col in metric_cols_to_convert:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce')
-                
+
         return df
     except FileNotFoundError:
         return None
@@ -244,6 +253,7 @@ plot_mode = st.sidebar.radio(
     "Display Mode:",
     (
         "State Estimates from Public QCEW Data",
+        "County Estimates from Public QCEW Data",
         "Regional Estimates from Public QCEW Data",
         "Compare to original ENOW"
     ),
@@ -251,7 +261,18 @@ plot_mode = st.sidebar.radio(
 )
 
 # --- Select Active DataFrame and Set Filters based on Mode ---
-estimate_modes = ["State Estimates from Public QCEW Data", "Regional Estimates from Public QCEW Data"]
+estimate_modes = [
+    "State Estimates from Public QCEW Data",
+    "County Estimates from Public QCEW Data",
+    "Regional Estimates from Public QCEW Data"
+]
+
+# Initialize variables to be used later
+selected_county = None
+selected_state = None
+geo_filter_type = None
+all_geo_label = None
+selected_geo = None
 
 if plot_mode in estimate_modes:
     active_df = open_enow_data
@@ -265,6 +286,32 @@ if plot_mode in estimate_modes:
         geo_label = "Select State:"
         all_geo_label = "All Coastal States"
         geo_filter_type = 'State'
+        geo_names = active_df["GeoName"].dropna().unique()
+        unique_geos = [all_geo_label] + sorted(geo_names)
+        selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
+
+    elif plot_mode == "County Estimates from Public QCEW Data":
+        # Filter for County-level data
+        active_df = active_df[(active_df['geoType'] == 'County') & (active_df['aggregation'] == 'Sector')].copy()
+        geo_filter_type = 'County'
+        all_geo_label = None # No "all" option for counties
+
+        state_label = "Select State:"
+        state_names = sorted(active_df['stateName'].dropna().unique())
+        selected_state = st.sidebar.selectbox(state_label, state_names)
+
+        county_label = "Select County:"
+        if selected_state:
+            county_names = sorted(
+                active_df[active_df['stateName'] == selected_state]['geoName'].dropna().unique()
+            )
+            selected_county = st.sidebar.selectbox(county_label, county_names)
+        else:
+            selected_county = st.sidebar.selectbox(county_label, [])
+        
+        # Set selected_geo to the county for unified logic later
+        selected_geo = selected_county
+
 
     else: # Regional Estimates from Public QCEW Data
         # Filter for Region-level data aggregated by Sector
@@ -272,9 +319,9 @@ if plot_mode in estimate_modes:
         geo_label = "Select Region:"
         all_geo_label = "All Regions"
         geo_filter_type = 'Region'
-        
-    geo_names = active_df["GeoName"].dropna().unique()
-    unique_geos = [all_geo_label] + sorted(geo_names)
+        geo_names = active_df["GeoName"].dropna().unique()
+        unique_geos = [all_geo_label] + sorted(geo_names)
+        selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
 
 else:  # "Compare to original ENOW"
     active_df = dorado_data
@@ -286,6 +333,7 @@ else:  # "Compare to original ENOW"
     all_geo_label = "All Coastal States"
     geo_names = active_df["GeoName"].dropna().unique()
     unique_geos = [all_geo_label] + sorted(geo_names)
+    selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
 
 
 # --- Dynamically create sidebar filters from the active dataframe ---
@@ -303,8 +351,6 @@ else:
     compare_metrics = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
     metric_choices = list(compare_metrics.keys())
 
-selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
-selected_sector = st.sidebar.selectbox("Select Marine Sector:", unique_sectors)
 selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
 selected_metric_internal = METRIC_MAP[selected_display_metric]
 
@@ -328,12 +374,16 @@ year_range = st.sidebar.slider(
 )
 
 # --- Dynamic Title ---
-if selected_sector == "All Marine Sectors":
-    title_sector_part = selected_sector
-else:
-    title_sector_part = f"{selected_sector} Sector"
+title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
 
-plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_geo}"
+if plot_mode == "County Estimates from Public QCEW Data":
+    if selected_county and selected_state:
+        plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_county}, {selected_state}"
+    else:
+        plot_title = "Please select a state and county to view estimates"
+else:
+    plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_geo}"
+
 st.title(plot_title)
 
 # --- GDP Banner ---
@@ -352,7 +402,19 @@ base_filtered_df = active_df[
 ]
 
 # --- Handle geography filtering ---
-if selected_geo == all_geo_label:
+if plot_mode == "County Estimates from Public QCEW Data":
+    if selected_county and selected_state:
+        # The active_df is already filtered by geoType='County'. This filter selects the specific county.
+        base_filtered_df = base_filtered_df[
+            (base_filtered_df["GeoName"] == selected_county) &
+            (base_filtered_df["stateName"] == selected_state)
+        ]
+    else:
+        # If no county is selected, the dataframe should be empty to prevent plotting errors
+        base_filtered_df = pd.DataFrame()
+
+elif all_geo_label and selected_geo == all_geo_label:
+    # Handles "All Coastal States" and "All Regions". The `active_df` is already correctly filtered.
     pass 
 else:
     # Filter for the specific geography (state or region) selected by the user
@@ -376,7 +438,7 @@ y_label = y_label_map.get(selected_display_metric, selected_display_metric)
 is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)", "Real Wages"]
 tooltip_format = '$,.0f' if is_currency else ',.0f'
 
-# --- Logic for State and Regional Estimate Modes ---
+# --- Logic for State, County, and Regional Estimate Modes ---
 if plot_mode in estimate_modes:
     
     nq_metric_col = f"NQ_{selected_metric_internal}"
@@ -449,7 +511,7 @@ if plot_mode in estimate_modes:
     # CASE 2 & 3: A SINGLE MARINE SECTOR IS SELECTED
     else:
         # CASE 2: SINGLE SECTOR, ALL GEOGRAPHIES (STACKED BY STATE/REGION)
-        if selected_geo == all_geo_label:
+        if all_geo_label and selected_geo == all_geo_label:
             source_df = base_filtered_df[['Year', 'GeoName', nq_metric_col]].copy()
             source_df.dropna(subset=[nq_metric_col], inplace=True)
 
@@ -568,44 +630,31 @@ if plot_mode in estimate_modes:
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
 
-    with st.expander(expander_title):
-        st.divider()
-        
-        if plot_mode == "Regional Estimates from Public QCEW Data":
-            st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
-        
-        elif plot_mode == "State Estimates from Public QCEW Data":
-            if selected_geo == "All Coastal States":
-                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
-            else:
-                st.markdown("""<style>...</style>""", unsafe_allow_html=True)
-                map_col, legend_col = st.columns([2, 1])
-                with map_col:
-                    map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
-                    if os.path.exists(map_filename):
-                        with st.container(border=True):
-                            st.image(map_filename, use_container_width=True)
-                    else:
-                        st.warning(f"Map for {selected_geo} not found.")
-                with legend_col:
-                    st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
-                    legend_html =  """
-                        <style>
-                            .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
-                            .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
-                            .legend-text { font-size: 1.1rem; }
-                        </style>
-                        <div class="legend-item">
-                            <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
-                            <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
-                        </div>
-                        <div class="legend-item">
-                            <div class="legend-color-box" style="background-color: #FFFF00;"></div>
-                            <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
-                        </div>
-                    """
-
-                    st.markdown(legend_html, unsafe_allow_html=True)
+    # Don't show the geography expander for county mode as it's not applicable
+    if plot_mode != "County Estimates from Public QCEW Data":
+        with st.expander(expander_title):
+            st.divider()
+            
+            if plot_mode == "Regional Estimates from Public QCEW Data":
+                st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
+            
+            elif plot_mode == "State Estimates from Public QCEW Data":
+                if selected_geo == "All Coastal States":
+                    st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
+                else:
+                    st.markdown("""<style>...</style>""", unsafe_allow_html=True)
+                    map_col, legend_col = st.columns([2, 1])
+                    with map_col:
+                        map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
+                        if os.path.exists(map_filename):
+                            with st.container(border=True):
+                                st.image(map_filename, use_container_width=True)
+                        else:
+                            st.warning(f"Map for {selected_geo} not found.")
+                    with legend_col:
+                        st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                        legend_html = """..."""
+                        st.markdown(legend_html, unsafe_allow_html=True)
     
         # --- Expandable Section for Metric Details ---
 
@@ -626,7 +675,7 @@ elif plot_mode == "Compare to original ENOW":
         enow_metric_col: "ENOW",
         nq_metric_col: "Estimate from public QCEW"
     }, inplace=True)
-   
+    
     if is_currency:
         plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
     compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
@@ -685,8 +734,3 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
-
-
-
-
