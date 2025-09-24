@@ -249,16 +249,62 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 # --- END: CODE FOR POP-UP WINDOW ---
 
 st.sidebar.header("Filters")
-plot_mode = st.sidebar.radio(
-    "Display Mode:",
-    (
-        "State Estimates from Public QCEW Data",
-        "County Estimates from Public QCEW Data",
-        "Regional Estimates from Public QCEW Data",
-        "Compare to original ENOW"
-    ),
-    index=0
-)
+
+# --- Custom Button Display Mode ---
+st.sidebar.markdown("Display Mode:")
+
+# Map button labels to plot_mode values
+button_map = {
+    "States": "State Estimates from Public QCEW Data",
+    "Counties": "County Estimates from Public QCEW Data",
+    "Regions": "Regional Estimates from Public QCEW Data",
+    "Compare": "Compare to original ENOW"
+}
+
+# Initialize session state for the plot mode
+if 'plot_mode' not in st.session_state:
+    st.session_state.plot_mode = button_map["States"]
+
+# Custom CSS to style the primary button as NOAA Sea Blue and make all buttons larger
+st.markdown("""
+<style>
+    /* Style for the selected (primary) button */
+    div[data-testid="stButton"] > button[kind="primary"] {
+        background-color: #0085CA;
+        color: white;
+        border: 1px solid #0085CA;
+        height: 3em;
+    }
+    /* Style for the unselected (secondary) buttons */
+    div[data-testid="stButton"] > button[kind="secondary"] {
+        height: 3em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Function to handle button clicks and update state
+def update_mode(mode_label):
+    st.session_state.plot_mode = button_map[mode_label]
+
+# Display buttons in a 2x2 grid and handle state changes
+cols1 = st.sidebar.columns(2)
+with cols1[0]:
+    is_selected = st.session_state.plot_mode == button_map["States"]
+    st.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
+with cols1[1]:
+    is_selected = st.session_state.plot_mode == button_map["Counties"]
+    st.button("Counties", on_click=update_mode, args=("Counties",), use_container_width=True, type="primary" if is_selected else "secondary")
+
+cols2 = st.sidebar.columns(2)
+with cols2[0]:
+    is_selected = st.session_state.plot_mode == button_map["Regions"]
+    st.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
+with cols2[1]:
+    is_selected = st.session_state.plot_mode == button_map["Compare"]
+    st.button("Compare", on_click=update_mode, args=("Compare",), use_container_width=True, type="primary" if is_selected else "secondary", help="Compare to original ENOW")
+
+plot_mode = st.session_state.plot_mode
+
 
 # --- Select Active DataFrame and Set Filters based on Mode ---
 estimate_modes = [
@@ -742,3 +788,4 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
