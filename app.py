@@ -772,19 +772,26 @@ elif plot_mode == "Compare to original ENOW":
         )
 
         # --- Summary Statistics ---
-        diff = compare_df["Estimate from public QCEW"] - compare_df["ENOW"]
-        pct_diff = (100 * diff / compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
-        summary_text = f"""
+        # Only calculate metrics if there are valid pairs of data points
+        valid_compare_df = compare_df.dropna(subset=["ENOW", "Estimate from public QCEW"])
+        if not valid_compare_df.empty:
+            mae = mean_absolute_error(valid_compare_df["ENOW"], valid_compare_df["Estimate from public QCEW"])
+            rmse = np.sqrt(mean_squared_error(valid_compare_df["ENOW"], valid_compare_df["Estimate from public QCEW"]))
+            diff = valid_compare_df["Estimate from public QCEW"] - valid_compare_df["ENOW"]
+            # Avoid division by zero for percent difference
+            pct_diff = (100 * diff / valid_compare_df["ENOW"]).replace([np.inf, -np.inf], np.nan)
 
-        Mean Difference: {format_value(diff.mean(), selected_display_metric)}
-        Median Difference: {format_value(diff.median(), selected_display_metric)}
-        Mean Percent Difference: {pct_diff.mean():.2f}%
-        """
+            summary_text = f"""
+Mean Absolute Error: {format_value(mae, selected_display_metric)}
+Root Mean Squared Error: {format_value(rmse, selected_display_metric)}
+Mean Percent Difference: {pct_diff.mean():.2f}%
+"""
+        else:
+            summary_text = "Not enough data points with both ENOW and Estimate values to calculate summary statistics."
+
 
         st.subheader("Summary Statistics")
         st.code(summary_text, language='text')
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
-
