@@ -560,11 +560,11 @@ if plot_mode in estimate_modes:
         st.divider()
         
         if plot_mode == "Regional Estimates from Public QCEW Data":
-            st.write("Open ENOW splits coastal states into 8 regions...")
+            st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
         
         elif plot_mode == "State Estimates from Public QCEW Data":
             if selected_geo == "All Coastal States":
-                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes...""")
+                st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
             else:
                 st.markdown("""<style>...</style>""", unsafe_allow_html=True)
                 map_col, legend_col = st.columns([2, 1])
@@ -658,4 +658,5 @@ elif plot_mode == "Compare to original ENOW":
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
