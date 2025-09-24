@@ -70,7 +70,7 @@ def load_open_enow_data():
             "rgdp": "NQ_RealGDP"
         }
         df.rename(columns=rename_dict, inplace=True)
-        
+
         # The geoType column from the CSV is renamed to GeoScale, but we still need the original for county filtering.
         # Let's read the original column again to ensure it exists for our logic.
         df_original = pd.read_csv("openENOWinput.csv")
@@ -236,7 +236,7 @@ This web app is a proof of concept. It displays preliminary results from an atte
 
 **How is Open ENOW different from the original ENOW dataset?**
 
-Open ENOW will, if developed into a publicly-released product, bridge a temporary gap in the Economics: National Ocean Watch (ENOW) dataset. The original ENOW dataset draws on establishment-level microdata collected by the Bureau of Labor Statistics (BLS). Due to resource constraints, BLS cannot currently support updates to the ENOW dataset. 
+Open ENOW will, if developed into a publicly-released product, bridge a temporary gap in the Economics: National Ocean Watch (ENOW) dataset. The original ENOW dataset draws on establishment-level microdata collected by the Bureau of Labor Statistics (BLS). Due to resource constraints, BLS cannot currently support updates to the ENOW dataset.
 
 The original ENOW dataset includes the data years 2005-2021. It does not capture substantial growth and changes in the ocean and Great Lakes economies since 2021 and, without annual updates, will become less and less relevant to users who want to understand current conditions and trends in marine economies. Open ENOW addresses this problem by creating “ENOW-like” estimates from public Quarterly Census of Employment and Wages (QCEW) data.
 
@@ -279,7 +279,7 @@ if plot_mode in estimate_modes:
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
         st.stop()
-    
+
     if plot_mode == "State Estimates from Public QCEW Data":
         # Filter for State-level data aggregated by Sector
         active_df = active_df[(active_df['GeoScale'] == 'State') & (active_df['aggregation'] == 'Sector')].copy()
@@ -308,7 +308,7 @@ if plot_mode in estimate_modes:
             selected_county = st.sidebar.selectbox(county_label, county_names)
         else:
             selected_county = st.sidebar.selectbox(county_label, [])
-        
+
         # Set selected_geo to the county for unified logic later
         selected_geo = selected_county
 
@@ -328,7 +328,7 @@ else:  # "Compare to original ENOW"
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `DORADO_combined_sectors.csv` is in the same directory as the app.")
         st.stop()
-    
+
     geo_label = "Select State:"
     all_geo_label = "All Coastal States"
     geo_names = active_df["GeoName"].dropna().unique()
@@ -339,6 +339,7 @@ else:  # "Compare to original ENOW"
 # --- Dynamically create sidebar filters from the active dataframe ---
 ocean_sectors = active_df["OceanSector"].dropna().unique()
 unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors)
 
 sorted_sector_names = sorted(ocean_sectors)
 colors_list = get_sector_colors(len(sorted_sector_names))
@@ -358,13 +359,13 @@ min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
 
 if plot_mode in estimate_modes:
     default_end_year = max_year
-    default_start_year = max(min_year, max_year - 9) 
+    default_start_year = max(min_year, max_year - 9)
     default_range = (default_start_year, default_end_year)
 else:  # "Compare to original ENOW"
     default_start_year = max(min_year, 2012)
     default_end_year = min(max_year, 2021)
     default_range = (default_start_year, default_end_year)
-    
+
 year_range = st.sidebar.slider(
     "Select Year Range:",
     min_value=min_year,
@@ -415,7 +416,7 @@ if plot_mode == "County Estimates from Public QCEW Data":
 
 elif all_geo_label and selected_geo == all_geo_label:
     # Handles "All Coastal States" and "All Regions". The `active_df` is already correctly filtered.
-    pass 
+    pass
 else:
     # Filter for the specific geography (state or region) selected by the user
     base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_geo]
@@ -440,13 +441,13 @@ tooltip_format = '$,.0f' if is_currency else ',.0f'
 
 # --- Logic for State, County, and Regional Estimate Modes ---
 if plot_mode in estimate_modes:
-    
+
     nq_metric_col = f"NQ_{selected_metric_internal}"
 
     # --- LATEST YEAR SUMMARY CALCULATION ---
     summary_message = None
     latest_year = year_range[1]
-    
+
     latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
 
     if not latest_year_data.empty:
@@ -454,7 +455,7 @@ if plot_mode in estimate_modes:
 
         if pd.notna(latest_value) and latest_value > 0:
             formatted_value = format_value(latest_value, selected_display_metric)
-            
+
             summary_text_templates = {
                 "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed in the selected sector(s) in <strong>{latest_year}</strong>.",
                 "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
@@ -464,21 +465,21 @@ if plot_mode in estimate_modes:
                 "Real GDP": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
             }
             summary_message = summary_text_templates.get(selected_display_metric)
-    
+
     # CASE 1: ALL MARINE SECTORS (STACKED BY SECTOR)
     if selected_sector == "All Marine Sectors":
         plot_df = base_filtered_df[["Year", "OceanSector", nq_metric_col]].copy()
         plot_df.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
-        
+
         if is_currency:
             plot_df["Estimate_value"] /= 1e6
-        
+
         if not plot_df.empty:
             chart = alt.Chart(plot_df).mark_bar().encode(
                 x=alt.X('Year:O', title='Year'),
                 y=alt.Y('sum(Estimate_value):Q', title=y_label),
-                color=alt.Color('OceanSector:N', 
+                color=alt.Color('OceanSector:N',
                                 scale=alt.Scale(domain=sorted_sector_names, range=colors_list),
                                 legend=alt.Legend(title="Sectors")),
                 tooltip=[
@@ -517,16 +518,16 @@ if plot_mode in estimate_modes:
 
             if not source_df.empty and source_df[nq_metric_col].sum() > 0:
                 source_df['rank'] = source_df.groupby('Year')[nq_metric_col].rank(method='first', ascending=False)
-                
+
                 other_geo_text = f"All Other {geo_filter_type}s"
                 source_df['GeoContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], other_geo_text)
 
                 plot_df_geos = source_df.groupby(['Year', 'GeoContribution'])[nq_metric_col].sum().reset_index()
                 plot_df_geos.rename(columns={nq_metric_col: "Estimate_value"}, inplace=True)
-                
+
                 if is_currency:
                     plot_df_geos["Estimate_value"] /= 1e6
-                
+
                 geo_color_palette = ["#332288", "#117733", "#44AA99", "#88CCEE", "#DDCC77", "#CC6677", "#AA4499", "#882255", "#E69F00", "#56B4E9", "#009E73", "#F0E442"]
                 other_geos_color = "#A5AAAF"
                 unique_contributors = sorted([c for c in plot_df_geos['GeoContribution'].unique() if c != other_geo_text])
@@ -539,7 +540,7 @@ if plot_mode in estimate_modes:
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
                     color=alt.Color('GeoContribution:N',
                                     legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"),
-                                    sort=sort_order, 
+                                    sort=sort_order,
                                     scale=alt.Scale(domain=color_domain, range=color_range)),
                     tooltip=[
                         alt.Tooltip('Year:O', title='Year'),
@@ -550,9 +551,9 @@ if plot_mode in estimate_modes:
                     labelFontSize=14,
                     titleFontSize=16
                 ).configure_legend(
-                    symbolLimit=31 
+                    symbolLimit=31
                 )
-                
+
                 st.altair_chart(chart, use_container_width=True)
 
                 # Data Download
@@ -569,14 +570,14 @@ if plot_mode in estimate_modes:
                 st.warning("No data available for the selected filters.")
 
         # CASE 3: SINGLE SECTOR, SINGLE GEOGRAPHY (SIMPLE BAR CHART)
-        else: 
+        else:
             bar_df = base_filtered_df.groupby("Year")[nq_metric_col].sum().reset_index()
             bar_df.rename(columns={nq_metric_col: 'Estimate_value'}, inplace=True)
-            
+
             if not bar_df.empty:
                 if is_currency:
                     bar_df["Estimate_value"] /= 1e6
-                
+
                 sector_color = sector_color_map.get(selected_sector, "#808080")
                 chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
                     x=alt.X('Year:O', title='Year'),
@@ -595,7 +596,7 @@ if plot_mode in estimate_modes:
 
                 # Data Download
                 download_df = bar_df
-                download_df.insert(1, 'OceanSector', selected_sector) 
+                download_df.insert(1, 'OceanSector', selected_sector)
                 download_df.rename(columns={'Estimate_value': y_label}, inplace=True)
                 csv_data = convert_df_to_csv(download_df)
                 file_name = f"{selected_geo.replace(' ', '_')}_{selected_sector.replace(' ', '_')}_{selected_display_metric.replace(' ', '_')}_{year_range[0]}_to_{year_range[1]}.csv"
@@ -607,7 +608,7 @@ if plot_mode in estimate_modes:
                 )
             else:
                 st.warning("No data available for the selected filters.")
-    
+
     # --- DISPLAY LATEST YEAR SUMMARY TEXT ---
     if summary_message:
         st.markdown(
@@ -625,7 +626,7 @@ if plot_mode in estimate_modes:
         }
         </style>
         """, unsafe_allow_html=True)
-        
+
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
@@ -634,10 +635,10 @@ if plot_mode in estimate_modes:
     if plot_mode != "County Estimates from Public QCEW Data":
         with st.expander(expander_title):
             st.divider()
-            
+
             if plot_mode == "Regional Estimates from Public QCEW Data":
                 st.write("Open ENOW splits coastal states into 8 regions. The **Great Lakes** region is the coastal counties of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The **Northeast** region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The **Mid-Atlantic** region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The **Southeast** region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The **Gulf** region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The **West** region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the **Pacific** region.")
-            
+
             elif plot_mode == "State Estimates from Public QCEW Data":
                 if selected_geo == "All Coastal States":
                     st.write("""Open ENOW includes all 30 U.S. states with a coastline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the coastline. Open ENOW relies on state-level instead of county-level data for three states–Delaware, Hawaii, and Rhode Island–where all counties are on the coastline. Select a state from the drop-down menu to see the portion of that state considered "coastal" for the purpose of Open ENOW estimates.""")
@@ -655,7 +656,7 @@ if plot_mode in estimate_modes:
                         st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
                         legend_html = """..."""
                         st.markdown(legend_html, unsafe_allow_html=True)
-    
+
         # --- Expandable Section for Metric Details ---
 
     metric_expander_title = f"{selected_display_metric} in Open ENOW"
@@ -675,7 +676,7 @@ elif plot_mode == "Compare to original ENOW":
         enow_metric_col: "ENOW",
         nq_metric_col: "Estimate from public QCEW"
     }, inplace=True)
-    
+
     if is_currency:
         plot_df[["ENOW", "Estimate from public QCEW"]] /= 1e6
     compare_df = plot_df.groupby("Year")[["ENOW", "Estimate from public QCEW"]].sum(min_count=1).reset_index()
@@ -686,7 +687,7 @@ elif plot_mode == "Compare to original ENOW":
         base = alt.Chart(long_form_df).encode(
             x=alt.X('Year:O', title='Year'),
             y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
-            color=alt.Color('Source:N', 
+            color=alt.Color('Source:N',
                             scale=alt.Scale(domain=['ENOW', 'Estimate from public QCEW'], range=['#D55E00', '#0072B2']),
                             legend=alt.Legend(title="Data Source", orient="bottom")),
             tooltip=[
@@ -706,7 +707,7 @@ elif plot_mode == "Compare to original ENOW":
         ).interactive()
 
         st.altair_chart(chart, use_container_width=True)
-        
+
         # --- Data Download Section ---
         st.divider()
         csv_data_compare = convert_df_to_csv(compare_df)
