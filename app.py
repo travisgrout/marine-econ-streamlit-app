@@ -239,12 +239,26 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 * Open ENOW reports on a slightly different set of employers than the original ENOW.
 """)
 
-# --- Custom CSS for Sidebar Background ---
-# All button-specific CSS has been removed as it's no longer needed.
+# --- Custom CSS for Sidebar and Tabs ---
 st.markdown("""
 <style>
+    /* Set sidebar background color */
     [data-testid="stSidebar"] {
         background-color: #C6E6F0;
+    }
+
+    /* --- Custom Tab Styling --- */
+    /* (1) Make tab titles larger */
+    button[data-baseweb="tab"] {
+        font-size: 1.25rem; /* Increase font size */
+        font-weight: 600;   /* Make font bolder */
+        padding: 10px 15px; /* Add some padding */
+    }
+
+    /* (2) Change the highlight color of the selected tab */
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #003087 !important; /* NOAA Sky Blue text */
+        border-bottom-color: #003087 !important; /* NOAA Sky Blue underline */
     }
 </style>
 """, unsafe_allow_html=True)
