@@ -124,7 +124,7 @@ def convert_df_to_csv(df):
 # --- Data Dictionaries for Expanders ---
 SECTOR_DESCRIPTIONS = {
     "Living Resources": {
-        "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life...",
+        "description": "The Living Resources sector includes industries engaged in the harvesting, processing, or selling of marine life. This encompasses commercial fishing, aquaculture (such as fish hatcheries and shellfish farming), seafood processing and packaging, and wholesale or retail seafood markets.",
         "table": pd.DataFrame([
             {"NAICS Code": "11251", "Years": "All years", "Description": "Fish Hatcheries and Aquaculture"},
             {"NAICS Code": "11411", "Years": "All years", "Description": "Fishing"},
@@ -137,13 +137,13 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Marine Construction": {
-        "description": "The Marine Construction sector is composed of establishments involved in heavy and civil engineering construction that is related to the marine environment...",
+        "description": "The Marine Construction sector is composed of establishments involved in heavy and civil engineering construction that is related to the marine environment, such as dredging, pier construction, and beach nourishment.",
         "table": pd.DataFrame([
             {"NAICS Code": "237990", "Years": "All years", "Description": "Other Heavy and Civil Engineering Construction"}
         ])
     },
     "Marine Transportation": {
-        "description": "The Marine Transportation sector includes industries that provide transportation for freight and passengers on the deep sea, coastal waters, or the Great Lakes...",
+        "description": "The Marine Transportation sector includes industries that provide transportation for freight and passengers on the deep sea, coastal waters, or the Great Lakes. It also covers support activities essential for water transport, such as port and harbor operations, marine cargo handling, and navigational services. The manufacturing of search and navigation equipment and warehousing services are also included in this sector.",
         "table": pd.DataFrame([
             {"NAICS Code": "334511", "Years": "All years", "Description": "Search, Detection, Navigation, Guidance, Aeronautical, and Nautical System and Instrument Manufacturing"},
             {"NAICS Code": "48311", "Years": "All years", "Description": "Marine Freight and Passenger Transport"},
@@ -152,7 +152,7 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Offshore Mineral Resources": {
-        "description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor...",
+        "description": "The Offshore Mineral Resources sector consists of industries involved in the exploration and extraction of minerals from the seafloor. This includes the extraction of crude petroleum and natural gas, the mining of sand and gravel, and support activities such as drilling and geophysical exploration.",
         "table": pd.DataFrame([
             {"NAICS Code": "211120", "Years": "2017 - present", "Description": "Crude Petroleum Extraction"},
             {"NAICS Code": "211130", "Years": "2017 - present", "Description": "Natural Gas Extraction"},
@@ -172,7 +172,7 @@ SECTOR_DESCRIPTIONS = {
         ])
     },
     "Tourism and Recreation": {
-        "description": "The Tourism and Recreation sector comprises a diverse group of industries in coastal zip codes...",
+        "description": "The Tourism and Recreation sector comprises a diverse group of industries that provide goods and services to people enjoying coastal recreation. This includes businesses such as full-service and limited-service restaurants, hotels and motels, marinas, boat dealers, and charter fishing operations. It also includes scenic water tours, sporting goods manufacturers, recreational instruction, and attractions like aquaria and nature parks.",
         "table": pd.DataFrame([
             {"NAICS Code": "339920", "Years": "All years", "Description": "Sporting and Athletic Goods Manufacturing"},
             {"NAICS Code": "441222", "Years": "All years", "Description": "Boat Dealers"},
@@ -634,6 +634,7 @@ if plot_mode in estimate_modes:
                    mime='text/csv',
                 )
 
+    st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
@@ -641,10 +642,10 @@ if plot_mode in estimate_modes:
         with st.expander(expander_title):
             st.divider()
             if plot_mode == "Regional Estimates from Public QCEW Data":
-                st.write("Open ENOW splits coastal states into 8 regions...")
+                st.write("Open ENOW splits coastal states into 8 regions. ")
             elif plot_mode == "State Estimates from Public QCEW Data":
                 if selected_geo == "All Coastal States":
-                    st.write("Open ENOW includes all 30 U.S. states with a coastline...")
+                    st.write("Open ENOW includes all 30 U.S. states with a shoreline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the shoreline. ")
                 else:
                     map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
                     if os.path.exists(map_filename): st.image(map_filename, use_container_width=True)
@@ -653,7 +654,6 @@ if plot_mode in estimate_modes:
         st.divider()
         st.write(METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available."))
 
-# --- 'Error Analysis' and 'Compare' Modes remain unchanged ---
 elif plot_mode == "Error Analysis":
     active_df = comparison_data
     if active_df is None:
@@ -661,6 +661,7 @@ elif plot_mode == "Error Analysis":
         st.stop()
 
     st.title("Error Analysis: Open ENOW vs. Original ENOW")
+
     st.sidebar.header("Plot Configuration")
     selected_agg = st.sidebar.radio("Aggregation Level:", ("Sector", "Industry"), index=0)
     selected_geoscale = st.sidebar.radio("Geographic Scale:", ("State", "County"), index=0)
@@ -685,57 +686,127 @@ elif plot_mode == "Error Analysis":
     selected_state_abbr = state_abbr_map[selected_state_name]
     sector_names = ["All Marine Sectors"] + sorted(active_df["OceanSector"].dropna().unique())
     selected_sector_filter = st.sidebar.selectbox("Filter by Sector:", sector_names)
+    
     if not grouping_vars:
         st.warning("Please select at least one 'Group By' option.")
         st.stop()
-    filtered_df = active_df[(active_df['aggregation'] == selected_agg) & (active_df['GeoScale'] == selected_geoscale) & (active_df['Year'] >= year_range[0]) & (active_df['Year'] <= year_range[1])].copy()
-    if selected_state_name != "All Coastal States": filtered_df = filtered_df[filtered_df['state'] == selected_state_abbr]
-    if selected_sector_filter != "All Marine Sectors": filtered_df = filtered_df[filtered_df['OceanSector'] == selected_sector_filter]
+        
+    filtered_df = active_df[
+        (active_df['aggregation'] == selected_agg) &
+        (active_df['GeoScale'] == selected_geoscale) &
+        (active_df['Year'] >= year_range[0]) &
+        (active_df['Year'] <= year_range[1])
+    ].copy()
+
+    if selected_state_name != "All Coastal States":
+        filtered_df = filtered_df[filtered_df['state'] == selected_state_abbr]
+
+    if selected_sector_filter != "All Marine Sectors":
+        filtered_df = filtered_df[filtered_df['OceanSector'] == selected_sector_filter]
+
     x_metric_map = {"Employment": "Employment", "Wages": "Wages", "GDP": "GDP"}
     metric_suffix = x_metric_map[x_axis_choice]
-    open_col, enow_col = f"Open_{metric_suffix}", f"oldENOW_{metric_suffix}"
+    open_col = f"Open_{metric_suffix}"
+    enow_col = f"oldENOW_{metric_suffix}"
+
     results = []
     grouping_cols = grouping_vars + ['GeoName']
+    
     for name, group_df in filtered_df.groupby(grouping_cols):
         group_df = group_df.dropna(subset=[enow_col, open_col])
         if group_df.empty: continue
+
         valid_enow = group_df[group_df[enow_col] != 0]
         mpd = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
-        result_row = {'X_Value': (group_df[enow_col].mean() + group_df[open_col].mean()) / 2, 'Original ENOW Value': group_df[enow_col].mean(), 'Open ENOW Estimate': group_df[open_col].mean(), 'Mean Percent Difference': mpd.mean() if not mpd.empty else np.nan, 'Mean Absolute Error': mean_absolute_error(group_df[enow_col], group_df[open_col]), 'Root Mean Squared Error': np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))}
-        for i, col in enumerate(grouping_vars): result_row[col] = name[i]
+        
+        result_row = {
+            'X_Value': (group_df[enow_col].mean() + group_df[open_col].mean()) / 2,
+            'Original ENOW Value': group_df[enow_col].mean(),
+            'Open ENOW Estimate': group_df[open_col].mean(),
+            'Mean Percent Difference': mpd.mean() if not mpd.empty else np.nan,
+            'Mean Absolute Error': mean_absolute_error(group_df[enow_col], group_df[open_col]),
+            'Root Mean Squared Error': np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
+        }
+        
+        for i, col in enumerate(grouping_vars):
+            result_row[col] = name[i]
         result_row['GeoName'] = name[len(grouping_vars)]
+        
         results.append(result_row)
+        
     if results:
         results_df = pd.DataFrame(results)
         results_df['Y_Value'] = results_df[y_axis_choice]
         results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
         results_df = results_df[results_df['X_Value'] > 0]
+
         if exclude_outliers and not results_df.empty:
-            Q1, Q3 = results_df['Y_Value'].quantile(0.25), results_df['Y_Value'].quantile(0.75)
+            Q1 = results_df['Y_Value'].quantile(0.25)
+            Q3 = results_df['Y_Value'].quantile(0.75)
             IQR = Q3 - Q1
-            lower_bound, upper_bound = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
             original_rows = len(results_df)
-            results_df = results_df[(results_df['Y_Value'] >= lower_bound) & (results_df['Y_Value'] <= upper_bound)]
+            results_df = results_df[
+                (results_df['Y_Value'] >= lower_bound) & (results_df['Y_Value'] <= upper_bound)
+            ]
             removed_rows = original_rows - len(results_df)
-            if removed_rows > 0: st.info(f"ℹ️ Excluded {removed_rows} outlier(s) based on the interquartile range of the Y-axis values.")
+            if removed_rows > 0:
+                st.info(f"ℹ️ Excluded {removed_rows} outlier(s) based on the interquartile range of the Y-axis values.")
+
         results_df['Group'] = results_df[grouping_vars].astype(str).agg(' - '.join, axis=1)
+        
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
+
         tooltip_format = '$,.0f' if x_axis_choice in ["Wages", "GDP"] else ',.0f'
-        tooltip_list = [alt.Tooltip('Group:N', title='Group'), alt.Tooltip('GeoName:N', title='Geography'), alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'), alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f'), alt.Tooltip('Original ENOW Value:Q', title='Original ENOW Value', format=tooltip_format), alt.Tooltip('Open ENOW Estimate:Q', title='Open ENOW Estimate', format=tooltip_format)]
-        base_chart = alt.Chart(results_df).encode(x=alt.X('X_Value:Q', scale=alt.Scale(type="log"), title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'), y=alt.Y('Y_Value:Q', title=y_axis_choice))
-        scatter_points = base_chart.mark_circle(size=100, opacity=0.8).encode(color=alt.Color('Group:N', legend=alt.Legend(title="Group")), tooltip=tooltip_list).interactive()
-        trend_line = scatter_points.transform_regression('X_Value', 'Y_Value', groupby=['Group'], order=2).mark_line()
+        tooltip_list = [
+            alt.Tooltip('Group:N', title='Group'),
+            alt.Tooltip('GeoName:N', title='Geography'),
+            alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'),
+            alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f'),
+            alt.Tooltip('Original ENOW Value:Q', title='Original ENOW Value', format=tooltip_format),
+            alt.Tooltip('Open ENOW Estimate:Q', title='Open ENOW Estimate', format=tooltip_format)
+        ]
+
+        base_chart = alt.Chart(results_df).encode(
+             x=alt.X('X_Value:Q', 
+                     scale=alt.Scale(type="log"), 
+                     title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
+             y=alt.Y('Y_Value:Q', title=y_axis_choice)
+        )
+
+        scatter_points = base_chart.mark_circle(size=100, opacity=0.8).encode(
+            color=alt.Color('Group:N', legend=alt.Legend(title="Group")),
+            tooltip=tooltip_list
+        ).interactive()
+
+        trend_line = scatter_points.transform_regression(
+            'X_Value', 'Y_Value', groupby=['Group'], order=2
+        ).mark_line()
+
         chart = (scatter_points + trend_line).properties(height=700)
+
         st.altair_chart(chart, use_container_width=True)
+        
         st.subheader("Summary Statistics by Group")
+        
         summary_cols = grouping_vars + ['GeoName', 'Original ENOW Value', 'Open ENOW Estimate', 'Mean Percent Difference', 'Mean Absolute Error', 'Root Mean Squared Error']
         summary_table = results_df[summary_cols].copy()
-        summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map(lambda x: f'{x:,.2f}%' if pd.notna(x) else 'N/A')
+        
+        summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map(
+            lambda x: f'{x:,.2f}%' if pd.notna(x) else 'N/A'
+        )
+        
         value_and_error_cols = ['Original ENOW Value', 'Open ENOW Estimate', 'Mean Absolute Error', 'Root Mean Squared Error']
         for col in value_and_error_cols:
-            if x_axis_choice in ["Wages", "GDP"]: summary_table[col] = summary_table[col].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else 'N/A')
-            else: summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else 'N/A')
+            if x_axis_choice in ["Wages", "GDP"]:
+                 summary_table[col] = summary_table[col].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else 'N/A')
+            else:
+                 summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else 'N/A')
+
         st.dataframe(summary_table.sort_values(by=grouping_vars), use_container_width=True)
+
     else:
         st.warning("No data available for the selected filters. Please broaden your criteria.")
 
@@ -744,79 +815,144 @@ else: # "Compare to original ENOW"
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
         st.stop()
+
     state_df = active_df[active_df['GeoScale'] == 'State']
     state_names = ["All Coastal States"] + sorted(state_df["GeoName"].dropna().unique())
     state_abbr_map = {"All Coastal States": "All"}
     state_abbr_map.update(pd.Series(state_df.state.values, index=state_df.GeoName).to_dict())
     selected_state_name = st.sidebar.selectbox("Select State:", state_names, key='compare_state')
     selected_state_abbr = state_abbr_map[selected_state_name]
+
     if selected_state_name == "All Coastal States":
         selected_county = "All Coastal Counties"
         st.sidebar.selectbox("Select County:", [selected_county], disabled=True)
     else:
         county_list = ["All Coastal Counties"] + sorted(active_df[(active_df['GeoScale'] == 'County') & (active_df['state'] == selected_state_abbr)]['GeoName'].unique())
-        def on_county_change(): st.session_state.compare_industry = "All Marine Industries"
+        def on_county_change():
+            st.session_state.compare_industry = "All Marine Industries"
         selected_county = st.sidebar.selectbox("Select County:", county_list, key='compare_county', on_change=on_county_change)
+
     ocean_sectors = ["All Marine Sectors"] + sorted(active_df["OceanSector"].dropna().unique())
     selected_sector = st.sidebar.selectbox("Select Sector:", ocean_sectors, key='compare_sector')
+
     if selected_sector == "All Marine Sectors":
         selected_industry = "All Marine Industries"
         st.sidebar.selectbox("Select Industry:", [selected_industry], disabled=True)
     else:
         industry_list = ["All Marine Industries"] + sorted(active_df[(active_df['aggregation'] == 'Industry') & (active_df['OceanSector'] == selected_sector)]['OceanIndustry'].unique())
-        def on_industry_change(): st.session_state.compare_county = "All Coastal Counties"
+        def on_industry_change():
+            st.session_state.compare_county = "All Coastal Counties"
         selected_industry = st.sidebar.selectbox("Select Industry:", industry_list, key='compare_industry', on_change=on_industry_change)
+
     metric_choices = {k: v for k, v in METRIC_MAP.items() if v != "RealWages"}
     selected_display_metric = st.sidebar.selectbox("Select Metric:", list(metric_choices.keys()))
     selected_metric_internal = METRIC_MAP[selected_display_metric]
+
     min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
-    year_range = st.sidebar.slider("Select Year Range:", min_year, max_year, (max(min_year, 2012), min(max_year, 2021)), 1)
+    year_range = st.sidebar.slider(
+        "Select Year Range:", min_year, max_year, (max(min_year, 2012), min(max_year, 2021)), 1
+    )
+
     geo_title_part = selected_state_name
-    if selected_county != "All Coastal Counties": geo_title_part = f"{selected_county}, {selected_state_abbr}"
-    econ_title_part = selected_sector
-    if selected_industry != "All Marine Industries": econ_title_part = selected_industry
-    if econ_title_part == "All Marine Sectors" and geo_title_part != "All Coastal States": econ_title_part = "All Marine Sectors"
-    elif econ_title_part == "All Marine Sectors" and geo_title_part == "All Coastal States": econ_title_part = "the Marine Economy"
-    st.title(f"{selected_display_metric} in {econ_title_part} in {geo_title_part}")
-    base_filtered_df = active_df[(active_df["Year"] >= year_range[0]) & (active_df["Year"] <= year_range[1])].copy()
     if selected_county != "All Coastal Counties":
-        base_filtered_df = base_filtered_df[(base_filtered_df['GeoScale'] == 'County') & (base_filtered_df['GeoName'] == selected_county)]
+        geo_title_part = f"{selected_county}, {selected_state_abbr}"
+    econ_title_part = selected_sector
+    if selected_industry != "All Marine Industries":
+        econ_title_part = selected_industry
+    if econ_title_part == "All Marine Sectors" and geo_title_part != "All Coastal States":
+         econ_title_part = "All Marine Sectors"
+    elif econ_title_part == "All Marine Sectors" and geo_title_part == "All Coastal States":
+        econ_title_part = "the Marine Economy"
+    st.title(f"{selected_display_metric} in {econ_title_part} in {geo_title_part}")
+    
+    base_filtered_df = active_df[
+        (active_df["Year"] >= year_range[0]) & (active_df["Year"] <= year_range[1])
+    ].copy()
+
+    if selected_county != "All Coastal Counties":
+        base_filtered_df = base_filtered_df[
+            (base_filtered_df['GeoScale'] == 'County') & 
+            (base_filtered_df['GeoName'] == selected_county)
+        ]
     else:
         base_filtered_df = base_filtered_df[base_filtered_df['GeoScale'] == 'State']
-        if selected_state_name != "All Coastal States": base_filtered_df = base_filtered_df[base_filtered_df['GeoName'] == selected_state_name]
+        if selected_state_name != "All Coastal States":
+            base_filtered_df = base_filtered_df[base_filtered_df['GeoName'] == selected_state_name]
+
     if selected_industry != "All Marine Industries":
-        base_filtered_df = base_filtered_df[(base_filtered_df['aggregation'] == 'Industry') & (base_filtered_df['OceanIndustry'] == selected_industry)]
+        base_filtered_df = base_filtered_df[
+            (base_filtered_df['aggregation'] == 'Industry') &
+            (base_filtered_df['OceanIndustry'] == selected_industry)
+        ]
     else:
         base_filtered_df = base_filtered_df[base_filtered_df['aggregation'] == 'Sector']
-        if selected_sector != "All Marine Sectors": base_filtered_df = base_filtered_df[base_filtered_df['OceanSector'] == selected_sector]
+        if selected_sector != "All Marine Sectors":
+            base_filtered_df = base_filtered_df[base_filtered_df['OceanSector'] == selected_sector]
+
     y_label_map = {"GDP (nominal)": "GDP ($ millions)", "Real GDP": "Real GDP ($ millions, 2017)", "Wages (not inflation-adjusted)": "Wages ($ millions)", "Employment": "Employment (Number of Jobs)", "Establishments": "Establishments (Count)"}
     y_label = y_label_map.get(selected_display_metric, selected_display_metric)
     is_currency = selected_display_metric in ["GDP (nominal)", "Real GDP", "Wages (not inflation-adjusted)"]
     tooltip_format = '$,.0f' if is_currency else ',.0f'
-    open_metric_col, enow_metric_col, noimpute_metric_col = f"Open_{selected_metric_internal}", f"oldENOW_{selected_metric_internal}", f"noimpute_{selected_metric_internal}"
+
+    open_metric_col = f"Open_{selected_metric_internal}"
+    enow_metric_col = f"oldENOW_{selected_metric_internal}"
+    noimpute_metric_col = f"noimpute_{selected_metric_internal}"
+    
     required_cols = ["Year", enow_metric_col, open_metric_col, noimpute_metric_col]
     if not all(col in base_filtered_df.columns for col in required_cols):
         st.warning("One or more data columns required for the chart are missing.")
         st.stop()
+
     plot_df = base_filtered_df[required_cols].copy()
-    plot_df.rename(columns={enow_metric_col: "Original ENOW", open_metric_col: "Open ENOW Estimate", noimpute_metric_col: "Public QCEW data, no imputed values"}, inplace=True)
-    if is_currency: plot_df.iloc[:, 1:] /= 1e6
+    plot_df.rename(columns={
+        enow_metric_col: "Original ENOW",
+        open_metric_col: "Open ENOW Estimate",
+        noimpute_metric_col: "Public QCEW data, no imputed values"
+    }, inplace=True)
+    
+    if is_currency:
+        plot_df.iloc[:, 1:] /= 1e6
+
     compare_df = plot_df.groupby("Year").sum(min_count=1).reset_index()
+    
     cols_to_check = ["Original ENOW", "Open ENOW Estimate", "Public QCEW data, no imputed values"]
     for col in cols_to_check:
-        if col in compare_df.columns: compare_df[col] = compare_df[col].replace({0: np.nan})
+        if col in compare_df.columns:
+            compare_df[col] = compare_df[col].replace({0: np.nan})
+
     long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
     long_form_df.dropna(subset=['Value'], inplace=True)
+
     if not long_form_df.empty:
-        base = alt.Chart(long_form_df).encode(x=alt.X('Year:O', title='Year'), y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)), color=alt.Color('Source:N', scale=alt.Scale(domain=['Original ENOW', 'Open ENOW Estimate', 'Public QCEW data, no imputed values'], range=['#D55E00', '#0072B2', '#117733']), legend=alt.Legend(title="Data Source", orient="bottom")), tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Source:N', title='Source'), alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)])
+        base = alt.Chart(long_form_df).encode(
+            x=alt.X('Year:O', title='Year'),
+            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+            color=alt.Color('Source:N',
+                            scale=alt.Scale(
+                                domain=['Original ENOW', 'Open ENOW Estimate', 'Public QCEW data, no imputed values'],
+                                range=['#D55E00', '#0072B2', '#117733']
+                            ),
+                            legend=alt.Legend(title="Data Source", orient="bottom")),
+            tooltip=[
+                alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Source:N', title='Source'),
+                alt.Tooltip('Value:Q', title=selected_display_metric, format=tooltip_format)
+            ]
+        )
         line = base.mark_line()
         points = base.mark_point(size=80, filled=True)
         chart = (line + points).properties(height=500).configure_axis(labelFontSize=14, titleFontSize=16).interactive()
         st.altair_chart(chart, use_container_width=True)
+
         st.divider()
         csv_data_compare = convert_df_to_csv(compare_df)
         file_name_compare = "Comparison_data.csv"
-        st.download_button(label="📥 Download Comparison Data as CSV", data=csv_data_compare, file_name=file_name_compare, mime='text/csv')
+        st.download_button(
+           label="📥 Download Comparison Data as CSV",
+           data=csv_data_compare,
+           file_name=file_name_compare,
+           mime='text/csv',
+        )
+        
         st.subheader("Summary Statistics")
         valid_compare_open = compare_df.dropna(subset=["Original ENOW", "Open ENOW Estimate"])
         if not valid_compare_open.empty:
@@ -824,22 +960,34 @@ else: # "Compare to original ENOW"
             rmse_open = np.sqrt(mean_squared_error(valid_compare_open["Original ENOW"], valid_compare_open["Open ENOW Estimate"]))
             diff_open = valid_compare_open["Open ENOW Estimate"] - valid_compare_open["Original ENOW"]
             pct_diff_open = (100 * diff_open / valid_compare_open["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
             st.markdown("##### Open ENOW Estimate (with imputed values)")
-            st.markdown(f"- **Mean Absolute Error:** {format_value(mae_open, selected_display_metric)}\n- **Root Mean Squared Error:** {format_value(rmse_open, selected_display_metric)}\n- **Mean Percent Difference:** {pct_diff_open.mean():.2f}%")
+            summary_text_open = f"""
+- **Mean Absolute Error:** {format_value(mae_open, selected_display_metric)}
+- **Root Mean Squared Error:** {format_value(rmse_open, selected_display_metric)}
+- **Mean Percent Difference:** {pct_diff_open.mean():.2f}%
+"""
+            st.markdown(summary_text_open)
         else:
             st.markdown("##### Open ENOW Estimate (with imputed values)")
             st.warning("Not enough overlapping data to calculate statistics.")
+            
         valid_compare_noimpute = compare_df.dropna(subset=["Original ENOW", "Public QCEW data, no imputed values"])
         if not valid_compare_noimpute.empty:
             mae_noimpute = mean_absolute_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputed values"])
             rmse_noimpute = np.sqrt(mean_squared_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputed values"]))
             diff_noimpute = valid_compare_noimpute["Public QCEW data, no imputed values"] - valid_compare_noimpute["Original ENOW"]
             pct_diff_noimpute = (100 * diff_noimpute / valid_compare_noimpute["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
             st.markdown("##### Public QCEW Estimate (no imputed values)")
-            st.markdown(f"- **Mean Absolute Error:** {format_value(mae_noimpute, selected_display_metric)}\n- **Root Mean Squared Error:** {format_value(rmse_noimpute, selected_display_metric)}\n- **Mean Percent Difference:** {pct_diff_noimpute.mean():.2f}%")
+            summary_text_noimpute = f"""
+- **Mean Absolute Error:** {format_value(mae_noimpute, selected_display_metric)}
+- **Root Mean Squared Error:** {format_value(rmse_noimpute, selected_display_metric)}
+- **Mean Percent Difference:** {pct_diff_noimpute.mean():.2f}%
+"""
+            st.markdown(summary_text_noimpute)
         else:
             st.markdown("##### Public QCEW Estimate (no imputed values)")
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
