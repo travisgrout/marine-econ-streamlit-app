@@ -95,7 +95,7 @@ def format_value(x, metric):
     """Formats numbers with commas and appropriate currency symbols."""
     if pd.isna(x):
         return "N/A"
-    if metric in ["Wages (not inflation-adjusted)", "Real Wages", "GDP (nominal)", "Real GDP"]:
+    if metric in ["Wages (not inflation-adjusted)", "Real Wages", "GDP (nominal)", "Real GDP", "Wages", "GDP"]:
         return f"${x:,.0f}"
     else:
         return f"{x:,.0f}"
@@ -249,7 +249,8 @@ button_map = {
     "States": "State Estimates from Public QCEW Data",
     "Counties": "County Estimates from Public QCEW Data",
     "Regions": "Regional Estimates from Public QCEW Data",
-    "Compare": "Compare to original ENOW"
+    "Compare": "Compare to original ENOW",
+    "Error Analysis": "Error Analysis" # NEW: Added Error Analysis mode
 }
 
 # Initialize session state for the plot mode
@@ -277,7 +278,7 @@ st.markdown("""
 def update_mode(mode_label):
     st.session_state.plot_mode = button_map[mode_label]
 
-# Display buttons in a 2x2 grid and handle state changes
+# Display buttons and handle state changes
 cols1 = st.sidebar.columns(2)
 with cols1[0]:
     is_selected = st.session_state.plot_mode == button_map["States"]
@@ -293,6 +294,13 @@ with cols2[0]:
 with cols2[1]:
     is_selected = st.session_state.plot_mode == button_map["Compare"]
     st.button("Compare", on_click=update_mode, args=("Compare",), use_container_width=True, type="primary" if is_selected else "secondary", help="Compare to original ENOW")
+
+# NEW: Add the fifth button for Error Analysis
+cols3 = st.sidebar.columns(2)
+with cols3[0]:
+    is_selected = st.session_state.plot_mode == button_map["Error Analysis"]
+    st.button("Error Analysis", on_click=update_mode, args=("Error Analysis",), use_container_width=True, type="primary" if is_selected else "secondary", help="Analyze differences between Open ENOW and original ENOW")
+
 
 plot_mode = st.session_state.plot_mode
 
@@ -541,6 +549,174 @@ if plot_mode in estimate_modes:
         st.divider()
         st.write(METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available."))
 
+# --- START: NEW 'Error Analysis' MODE ---
+elif plot_mode == "Error Analysis":
+    active_df = comparison_data
+    if active_df is None:
+        st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
+        st.stop()
+
+    st.title("Error Analysis: Open ENOW vs. Original ENOW")
+
+    # --- SIDEBAR FILTERS ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("Plot Configuration")
+
+    # Granularity filters
+    selected_agg = st.sidebar.radio("Aggregation Level:", ("Sector", "Industry"), index=0)
+    selected_geoscale = st.sidebar.radio("Geographic Scale:", ("State", "County"), index=0)
+
+    # Metric selection for axes
+    y_axis_choice = st.sidebar.selectbox(
+        "Y-Axis (Error Metric):",
+        ("Mean Percent Difference", "Mean Absolute Error", "Root Mean Squared Error"),
+        index=0
+    )
+    x_axis_choice = st.sidebar.selectbox(
+        "X-Axis (Economic Metric):",
+        ("Employment", "Wages", "GDP"),
+        index=0
+    )
+
+    # Grouping for trendlines and colors
+    grouping_choice = st.sidebar.selectbox(
+        "Group By:",
+        ("OceanSector", "OceanIndustry"),
+        index=0
+    )
+
+    # Data filters
+    st.sidebar.markdown("---")
+    st.sidebar.header("Data Filters")
+
+    min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
+    year_range = st.sidebar.slider(
+        "Select Year Range:", min_year, max_year, (min_year, max_year), 1
+    )
+
+    state_names = ["All Coastal States"] + sorted(active_df[active_df['GeoScale'] == 'State']["GeoName"].dropna().unique())
+    selected_state_name = st.sidebar.selectbox("Filter by State:", state_names)
+
+    sector_names = ["All Marine Sectors"] + sorted(active_df["OceanSector"].dropna().unique())
+    selected_sector_filter = st.sidebar.selectbox("Filter by Sector:", sector_names)
+
+    # --- DATA PROCESSING ---
+    
+    # Base filtering
+    filtered_df = active_df[
+        (active_df['aggregation'] == selected_agg) &
+        (active_df['GeoScale'] == selected_geoscale) &
+        (active_df['Year'] >= year_range[0]) &
+        (active_df['Year'] <= year_range[1])
+    ].copy()
+
+    if selected_state_name != "All Coastal States":
+        filtered_df = filtered_df[filtered_df['GeoName'] == selected_state_name]
+
+    if selected_sector_filter != "All Marine Sectors":
+        filtered_df = filtered_df[filtered_df['OceanSector'] == selected_sector_filter]
+
+    # Define metric columns based on user choice
+    x_metric_map = {
+        "Employment": "Employment",
+        "Wages": "Wages",
+        "GDP": "GDP"
+    }
+    metric_suffix = x_metric_map[x_axis_choice]
+    open_col = f"Open_{metric_suffix}"
+    enow_col = f"oldENOW_{metric_suffix}"
+
+    # Calculate metrics for each group
+    results = []
+    
+    # Each point on the plot represents a GeoName within a chosen group
+    grouping_cols = [grouping_choice, 'GeoName']
+    
+    for name, group_df in filtered_df.groupby(grouping_cols):
+        
+        # Ensure we have data to compare
+        group_df = group_df.dropna(subset=[enow_col, open_col])
+        if group_df.empty:
+            continue
+
+        # Avoid division by zero for percent difference
+        valid_enow = group_df[group_df[enow_col] != 0]
+        if valid_enow.empty:
+             mpd = np.nan
+        else:
+             pct_diff = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
+             mpd = pct_diff.mean()
+
+        mae = mean_absolute_error(group_df[enow_col], group_df[open_col])
+        rmse = np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
+        
+        x_val = (group_df[enow_col].mean() + group_df[open_col].mean()) / 2
+
+        result_row = {
+            grouping_choice: name[0],
+            'GeoName': name[1],
+            'X_Value': x_val,
+            'Mean Percent Difference': mpd,
+            'Mean Absolute Error': mae,
+            'Root Mean Squared Error': rmse,
+            'Y_Value': 0 # Placeholder
+        }
+        results.append(result_row)
+        
+    if results:
+        results_df = pd.DataFrame(results).dropna(subset=['Y_Value', 'X_Value'])
+        # Assign the chosen Y-axis metric to the 'Y_Value' column for plotting
+        results_df['Y_Value'] = results_df[y_axis_choice]
+        
+        # --- PLOTTING ---
+        st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
+
+        scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
+            x=alt.X('X_Value:Q', title=f'Mean of Original and Open ENOW {x_axis_choice}'),
+            y=alt.Y('Y_Value:Q', title=y_axis_choice),
+            color=alt.Color(f'{grouping_choice}:N', legend=alt.Legend(title="Group")),
+            tooltip=[
+                alt.Tooltip(f'{grouping_choice}:N', title='Group'),
+                alt.Tooltip('GeoName:N', title='Geography'),
+                alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'),
+                alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f')
+            ]
+        ).interactive()
+
+        trend = scatter.transform_regression(
+            'X_Value', 'Y_Value', groupby=[grouping_choice]
+        ).mark_line()
+
+        st.altair_chart((scatter + trend), use_container_width=True)
+        
+        # --- SUMMARY STATISTICS TABLE ---
+        st.subheader("Summary Statistics by Group")
+        
+        # Prepare table for display
+        summary_table = results_df[[
+            grouping_choice,
+            'GeoName',
+            'Mean Percent Difference',
+            'Mean Absolute Error',
+            'Root Mean Squared Error'
+        ]].copy()
+        
+        # Formatting for better readability
+        summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map('{:,.2f}%'.format)
+        
+        currency_metrics = ['Mean Absolute Error', 'Root Mean Squared Error']
+        for col in currency_metrics:
+            if x_axis_choice in ["Wages", "GDP"]:
+                 summary_table[col] = summary_table[col].apply(lambda x: f"${x:,.0f}")
+            else:
+                 summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}")
+
+        st.dataframe(summary_table, use_container_width=True)
+
+    else:
+        st.warning("No data available for the selected filters. Please broaden your criteria.")
+
+# --- END: NEW 'Error Analysis' MODE ---
 
 else:  # "Compare to original ENOW"
     active_df = comparison_data
@@ -749,7 +925,3 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
-
-
-
