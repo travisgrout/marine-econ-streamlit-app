@@ -249,7 +249,7 @@ button_map = {
     "States": "State Estimates from Public QCEW Data",
     "Counties": "County Estimates from Public QCEW Data",
     "Regions": "Regional Estimates from Public QCEW Data",
-    "REVIEWERS": "Compare to original ENOW"
+    "Compare": "Compare to original ENOW"
 }
 
 # Initialize session state for the plot mode
@@ -749,6 +749,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
