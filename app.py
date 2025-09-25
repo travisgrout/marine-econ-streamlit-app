@@ -300,9 +300,6 @@ with row1_cols[1]:
 is_selected = st.session_state.plot_mode == button_map["States"]
 st.sidebar.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
 
-# --- MODIFICATION 3(a): Added divider above "Reviewer Displays" ---
-st.sidebar.divider() 
-
 st.sidebar.header("Reviewer Displays (Temporary)")
 rev_cols = st.sidebar.columns(2)
 with rev_cols[0]:
@@ -313,7 +310,7 @@ with rev_cols[1]:
     st.button("Error Analysis", on_click=update_mode, args=("Error Analysis",), use_container_width=True, type="primary" if is_selected else "secondary", help="Analyze differences between Open ENOW and original ENOW")
 # --- END: RESTRUCTURED BUTTON LAYOUT ---
 
-# --- MODIFICATION 3(b): Added divider above filter section ---
+# divider above filter section 
 st.sidebar.divider() 
 
 plot_mode = st.session_state.plot_mode
@@ -1009,3 +1006,4 @@ else: # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
