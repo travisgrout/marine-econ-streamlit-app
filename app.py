@@ -697,7 +697,6 @@ elif plot_mode == "Error Analysis":
             alt.Tooltip('Open ENOW Estimate:Q', title='Open ENOW Estimate', format=tooltip_format)
         ]
 
-        # UPDATED: Define a base chart to resolve layering issues
         base_chart = alt.Chart(results_df).encode(
              x=alt.X('X_Value:Q', 
                     scale=alt.Scale(type="log"), 
@@ -710,30 +709,13 @@ elif plot_mode == "Error Analysis":
             tooltip=tooltip_list
         ).interactive()
 
-        if selected_sector_filter != "All Marine Sectors":
-            st.info("ℹ️ A smoothed trend line (LOESS) with a 95% confidence interval is shown for single-sector analysis.")
-            
-            # Create the confidence interval band from the base chart
-            confidence_interval = base_chart.transform_loess(
-                'X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8
-            ).mark_errorband(extent='ci').encode(
-                color=alt.Color('Group:N') # Match color to the group
-            )
+        # UPDATED: Replaced all trendlines with a single quadratic trendline
+        # The 'order=2' parameter creates the quadratic fit.
+        trend_line = scatter_points.transform_regression(
+            'X_Value', 'Y_Value', groupby=['Group'], order=2
+        ).mark_line()
 
-            # Create the trend line from the base chart
-            trend_line = base_chart.transform_loess(
-                'X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8
-            ).mark_line(opacity=0.8).encode(
-                color=alt.Color('Group:N')
-            )
-            
-            chart = (scatter_points + confidence_interval + trend_line).properties(height=700)
-        else:
-            # For all sectors, show the standard linear regression line
-            trend_line = scatter_points.transform_regression(
-                'X_Value', 'Y_Value', groupby=['Group']
-            ).mark_line()
-            chart = (scatter_points + trend_line).properties(height=700)
+        chart = (scatter_points + trend_line).properties(height=700)
 
         st.altair_chart(chart, use_container_width=True)
         
@@ -974,6 +956,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
