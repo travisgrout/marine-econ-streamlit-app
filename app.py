@@ -677,6 +677,9 @@ elif plot_mode == "Error Analysis":
         results_df['Y_Value'] = results_df[y_axis_choice]
         results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
         
+        # UPDATED: Filter for positive values before plotting on a log scale
+        results_df = results_df[results_df['X_Value'] > 0]
+        
         # --- PLOTTING ---
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
         
@@ -684,7 +687,10 @@ elif plot_mode == "Error Analysis":
         color_encoding_type = 'O' if grouping_choice == 'Year' else 'N'
 
         scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
-            x=alt.X('X_Value:Q', title=f'Mean of Original and Open ENOW {x_axis_choice}'),
+            # UPDATED: Added scale=alt.Scale(type="log") to the X-axis encoding
+            x=alt.X('X_Value:Q', 
+                    scale=alt.Scale(type="log"), 
+                    title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
             y=alt.Y('Y_Value:Q', title=y_axis_choice),
             color=alt.Color(f'{grouping_choice}:{color_encoding_type}', legend=alt.Legend(title="Group")),
             tooltip=[
@@ -937,4 +943,5 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
