@@ -462,23 +462,44 @@ if plot_mode in estimate_modes:
     
     open_metric_col = f"Open_{selected_metric_internal}"
     
-    summary_message = None
-    latest_year = year_range[1]
-    latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
-
-    if not latest_year_data.empty:
+    # --- START: MODIFICATION 3 - ENHANCED SUMMARY ---
+    summary_message = ""
+    change_message = ""
+    if not base_filtered_df.empty:
+        # Latest year calculation
+        latest_year = year_range[1]
+        latest_year_data = base_filtered_df[base_filtered_df['Year'] == latest_year]
         latest_value = latest_year_data[open_metric_col].sum()
+
         if pd.notna(latest_value) and latest_value > 0:
             formatted_value = format_value(latest_value, selected_display_metric)
+            
+            # Dynamic text for selected sector
+            if selected_sector == "All Marine Sectors":
+                sector_text_part = "in all marine sectors"
+            else:
+                sector_text_part = f"in the {selected_sector} Sector"
+                
             summary_text_templates = {
-                "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed in the selected sector(s) in <strong>{latest_year}</strong>.",
-                "Wages (not inflation-adjusted)": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
-                "Real Wages": f"Workers in the selected sector(s) earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
-                "Establishments": f"There were about <strong>{formatted_value}</strong> establishments in the selected sector(s) in <strong>{latest_year}</strong>.",
+                "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed {sector_text_part} in <strong>{latest_year}</strong>.",
+                "Wages (not inflation-adjusted)": f"Workers {sector_text_part} earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
+                "Real Wages": f"Workers {sector_text_part} earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
+                "Establishments": f"There were about <strong>{formatted_value}</strong> establishments {sector_text_part} in <strong>{latest_year}</strong>.",
                 "GDP (nominal)": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong>.",
                 "Real GDP": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
             }
-            summary_message = summary_text_templates.get(selected_display_metric)
+            summary_message = summary_text_templates.get(selected_display_metric, "")
+
+            # Percent change calculation
+            start_year = year_range[0]
+            start_year_data = base_filtered_df[base_filtered_df['Year'] == start_year]
+            start_value = start_year_data[open_metric_col].sum()
+
+            if pd.notna(start_value) and start_value > 0 and start_year != latest_year:
+                percent_change = ((latest_value - start_value) / start_value) * 100
+                change_direction = "increase" if percent_change >= 0 else "decrease"
+                change_message = f"<i>This represents a {abs(percent_change):.0f}% {change_direction} since {start_year}.</i>"
+    # --- END: MODIFICATION 3 ---
 
     # --- Charting Logic Starts ---
     chart_data_to_download = pd.DataFrame() # Initialize an empty df
@@ -496,7 +517,7 @@ if plot_mode in estimate_modes:
             chart = alt.Chart(plot_df).mark_bar().encode(
                 x=alt.X('Year:O', title='Year'),
                 y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero', 
-                        axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(a): Simplify y-axis ---
+                        axis=alt.Axis(tickCount=8)), # --- MODIFICATION 1(a): Increase y-axis ticks ---
                 color=alt.Color('OceanSector:N', scale=alt.Scale(domain=sorted_sector_names, range=colors_list), legend=alt.Legend(title="Sectors")),
                 tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('OceanSector:N', title='Sector'), alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)]
             ).properties(
@@ -526,7 +547,7 @@ if plot_mode in estimate_modes:
                 chart = alt.Chart(plot_df_geos).mark_bar().encode(
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
-                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(b): Simplify y-axis ---
+                           axis=alt.Axis(tickCount=8)), # --- MODIFICATION 1(b): Increase y-axis ticks ---
                     color=alt.Color('GeoContribution:N', legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"), sort=sort_order, scale=alt.Scale(domain=sort_order, range=color_range)),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('GeoContribution:N', title='Contribution'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
@@ -548,7 +569,7 @@ if plot_mode in estimate_modes:
                 chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
-                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(c): Simplify y-axis ---
+                           axis=alt.Axis(tickCount=8)), # --- MODIFICATION 1(c): Increase y-axis ticks ---
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
                     height=600
@@ -557,7 +578,42 @@ if plot_mode in estimate_modes:
             else:
                 st.warning("No data available for the selected filters.")
 
-    # --- MODIFICATION 4: Add download button logic ---
+    # --- Display Summary Messages ---
+    if summary_message:
+        st.markdown(f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>", unsafe_allow_html=True)
+    if change_message:
+        st.markdown(f"<p style='font-size: 18px; text-align: center;'>{change_message}</p>", unsafe_allow_html=True)
+
+    # --- START: MODIFICATION 2 - "VIEW AS TABLE" EXPANDER ---
+    if not chart_data_to_download.empty:
+        with st.expander("View as a Table"):
+            table_df = None
+            if 'OceanSector' in chart_data_to_download.columns:
+                # Case: All Marine Sectors
+                pivot_index = 'OceanSector'
+                table_df = chart_data_to_download.pivot_table(
+                    index=pivot_index, columns='Year', values='Estimate_value'
+                )
+                table_df.index.name = "Sector"
+            elif 'GeoContribution' in chart_data_to_download.columns:
+                # Case: Single Sector, All Geos
+                pivot_index = 'GeoContribution'
+                table_df = chart_data_to_download.pivot_table(
+                    index=pivot_index, columns='Year', values='Estimate_value'
+                )
+                table_df.index.name = "Geography"
+            else:
+                # Case: Single Sector, Single Geo
+                table_df = chart_data_to_download.set_index('Year').rename(
+                    columns={'Estimate_value': selected_sector}
+                ).T
+                table_df.index.name = "Sector"
+
+            if table_df is not None:
+                st.dataframe(table_df.style.format("{:,.0f}", na_rep="N/A"), use_container_width=True)
+    # --- END: MODIFICATION 2 ---
+    
+    # --- Download Button (Moved below table expander) ---
     if not chart_data_to_download.empty:
         csv_data = convert_df_to_csv(chart_data_to_download)
         
@@ -574,10 +630,6 @@ if plot_mode in estimate_modes:
            mime='text/csv',
         )
 
-
-    if summary_message:
-        st.markdown(f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>", unsafe_allow_html=True)
-    
     st.divider()
     st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
     expander_title = "Coastal Geographies in Open ENOW"
