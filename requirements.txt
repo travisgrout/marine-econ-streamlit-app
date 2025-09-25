@@ -3,5 +3,5 @@ pandas
 numpy
 altair
 textwrap
-os
 scikit-learn
+
