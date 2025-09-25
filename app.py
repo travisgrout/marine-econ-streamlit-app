@@ -634,7 +634,6 @@ if plot_mode in estimate_modes:
                    mime='text/csv',
                 )
 
-    st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
@@ -991,3 +990,4 @@ else: # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
