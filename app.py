@@ -658,7 +658,7 @@ else:  # "Compare to original ENOW"
     plot_df.rename(columns={
         enow_metric_col: "Original ENOW",
         open_metric_col: "Open ENOW Estimate",
-        noimpute_metric_col: "Public QCEW data, no imputated values"
+        noimpute_metric_col: "Public QCEW data, no imputed values"
     }, inplace=True)
     
     if is_currency:
@@ -667,7 +667,7 @@ else:  # "Compare to original ENOW"
     compare_df = plot_df.groupby("Year").sum(min_count=1).reset_index()
     
     # Replace 0 with NaN so that lines with no data don't drop to zero
-    cols_to_check = ["Original ENOW", "Open ENOW Estimate", "Public QCEW data, no imputated values"]
+    cols_to_check = ["Original ENOW", "Open ENOW Estimate", "Public QCEW data, no imputed values"]
     for col in cols_to_check:
         if col in compare_df.columns:
             compare_df[col] = compare_df[col].replace({0: np.nan})
@@ -679,10 +679,10 @@ else:  # "Compare to original ENOW"
     if not long_form_df.empty:
         base = alt.Chart(long_form_df).encode(
             x=alt.X('Year:O', title='Year'),
-            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=False)),
+            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
             color=alt.Color('Source:N',
                             scale=alt.Scale(
-                                domain=['Original ENOW', 'Open ENOW Estimate', 'Public QCEW data, no imputated values'],
+                                domain=['Original ENOW', 'Open ENOW Estimate', 'Public QCEW data, no imputed values'],
                                 range=['#D55E00', '#0072B2', '#117733']
                             ),
                             legend=alt.Legend(title="Data Source", orient="bottom")),
@@ -729,11 +729,11 @@ else:  # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
             
         # For No Imputation Estimate
-        valid_compare_noimpute = compare_df.dropna(subset=["Original ENOW", "Public QCEW data, no imputated values"])
+        valid_compare_noimpute = compare_df.dropna(subset=["Original ENOW", "Public QCEW data, no imputed values"])
         if not valid_compare_noimpute.empty:
-            mae_noimpute = mean_absolute_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputated values"])
-            rmse_noimpute = np.sqrt(mean_squared_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputated values"]))
-            diff_noimpute = valid_compare_noimpute["Public QCEW data, no imputated values"] - valid_compare_noimpute["Original ENOW"]
+            mae_noimpute = mean_absolute_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputed values"])
+            rmse_noimpute = np.sqrt(mean_squared_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputed values"]))
+            diff_noimpute = valid_compare_noimpute["Public QCEW data, no imputed values"] - valid_compare_noimpute["Original ENOW"]
             pct_diff_noimpute = (100 * diff_noimpute / valid_compare_noimpute["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
             
             st.markdown("##### Public QCEW Estimate (no imputed values)")
@@ -749,4 +749,5 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
