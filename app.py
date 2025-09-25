@@ -255,7 +255,7 @@ button_map = {
 if 'plot_mode' not in st.session_state:
     st.session_state.plot_mode = button_map["States"]
 
-# --- START: MODIFIED CSS FOR SEGMENTED BUTTON ---
+# --- START: MODIFIED CSS FOR SEGMENTED BUTTON (MORE ROBUST) ---
 # Custom CSS to style the sidebar, segmented button, and reviewer buttons
 st.markdown("""
 <style>
@@ -265,48 +265,56 @@ st.markdown("""
     }
 
     /* --- Segmented Button CSS --- */
-    /* Main container for the radio button group */
-    div[data-testid="stRadio"] {
-        /* Creates a flex container to hold the segments */
+    /* This targets the container for the radio buttons */
+    div[data-testid="stRadio"] > div {
+        /* Turns the container into a flexbox */
         display: flex;
-        /* Removes padding from the streamlit component */
-        padding: 0px;
-        /* Rounds the corners of the entire button */
-        border-radius: 5px;
+        /* Removes the default gap between radio items */
+        gap: 0;
+        /* Adds a border around the entire group */
+        border: 1px solid #B0B0B0;
+        border-radius: 5px; /* Rounds the corners of the group */
         overflow: hidden; /* Ensures children respect the border radius */
-        border: 1px solid #B0B0B0; /* Adds a border around the group */
     }
 
-    /* Hide the actual radio button circles */
-    [data-testid="stRadio"] input[type="radio"] {
-        display: none;
-    }
-
-    /* Style for each individual segment (the visible part) */
-    [data-testid="stRadio"] label div {
-        /* Non-selected state */
+    /* This targets each individual radio button's label */
+    div[data-testid="stRadio"] label {
+        /* Ensures each segment takes up equal space */
+        flex: 1;
+        /* Hides the actual radio button circle */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        /* Styling for the non-selected state */
         background-color: #DDDDDD; /* Grey background */
         color: black;
-        padding: 6px 0px; /* Vertical and horizontal padding */
+        padding: 6px 0;
         text-align: center;
         border-right: 1px solid #B0B0B0; /* Separator line */
         transition: background-color 0.3s, color 0.3s;
         cursor: pointer;
         font-weight: 500;
-        flex-grow: 1; /* Ensures all segments take up equal space */
+        /* Removes any margin that might be pushing them apart */
+        margin: 0 !important;
     }
 
     /* Remove the right border from the last segment */
-    [data-testid="stRadio"] label:last-child div {
+    div[data-testid="stRadio"] label:last-of-type {
         border-right: none;
     }
     
     /* Style for the SELECTED segment */
-    [data-testid="stRadio"] input[type="radio"]:checked + div {
-        background-color: #003087; /* NOAA Sky background */
-        color: white;
-        font-weight: bold;
+    div[data-testid="stRadio"] input[type="radio"]:checked + div {
+        background-color: #003087 !important; /* NOAA Sky background */
+        color: white !important;
+        font-weight: bold !important;
     }
+    
+    /* Some versions of Streamlit wrap the label text in a div, this targets that */
+    div[data-testid="stRadio"] label > div {
+        width: 100%;
+    }
+
 
     /* --- Reviewer Display Buttons CSS --- */
     /* Style for the selected (primary) button */
@@ -1026,3 +1034,4 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
