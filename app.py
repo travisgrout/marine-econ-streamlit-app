@@ -556,7 +556,7 @@ elif plot_mode == "Error Analysis":
         st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
         st.stop()
 
-    st.title("Error Analysis: Open ENOW vs. Original ENOW")
+    st.title("Error Analysis: Open ENOW vs. Original ENow")
 
     # --- SIDEBAR FILTERS ---
     st.sidebar.markdown("---")
@@ -589,6 +589,9 @@ elif plot_mode == "Error Analysis":
         grouping_vars.append("Year")
     if st.sidebar.checkbox("State", value=False):
         grouping_vars.append("state") # The column name is 'state'
+
+    # NEW: Added toggle to exclude outliers
+    exclude_outliers = st.sidebar.checkbox("Exclude Outliers", value=False)
 
     # Data filters
     st.sidebar.markdown("---")
@@ -634,7 +637,6 @@ elif plot_mode == "Error Analysis":
     enow_col = f"oldENOW_{metric_suffix}"
 
     results = []
-    # Each point on the plot represents a GeoName within the selected combination of groups
     grouping_cols = grouping_vars + ['GeoName']
     
     for name, group_df in filtered_df.groupby(grouping_cols):
@@ -644,7 +646,6 @@ elif plot_mode == "Error Analysis":
         valid_enow = group_df[group_df[enow_col] != 0]
         mpd = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
         
-        # UPDATED: Calculate mean of original and open ENOW values
         result_row = {
             'X_Value': (group_df[enow_col].mean() + group_df[open_col].mean()) / 2,
             'Original ENOW Value': group_df[enow_col].mean(),
@@ -654,7 +655,6 @@ elif plot_mode == "Error Analysis":
             'Root Mean Squared Error': np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
         }
         
-        # Populate the grouping columns dynamically
         for i, col in enumerate(grouping_vars):
             result_row[col] = name[i]
         result_row['GeoName'] = name[len(grouping_vars)]
@@ -667,13 +667,27 @@ elif plot_mode == "Error Analysis":
         results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
         results_df = results_df[results_df['X_Value'] > 0]
 
-        # Create a single 'Group' column for coloring and trendlines
+        # NEW: Outlier exclusion logic
+        if exclude_outliers and not results_df.empty:
+            Q1 = results_df['Y_Value'].quantile(0.25)
+            Q3 = results_df['Y_Value'].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            
+            original_rows = len(results_df)
+            results_df = results_df[
+                (results_df['Y_Value'] >= lower_bound) & (results_df['Y_Value'] <= upper_bound)
+            ]
+            removed_rows = original_rows - len(results_df)
+            if removed_rows > 0:
+                st.info(f"ℹ️ Excluded {removed_rows} outlier(s) based on the interquartile range of the Y-axis values.")
+
         results_df['Group'] = results_df[grouping_vars].astype(str).agg(' - '.join, axis=1)
         
         # --- PLOTTING ---
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
 
-        # UPDATED: Dynamically create the tooltip with new values
         tooltip_format = '$,.0f' if x_axis_choice in ["Wages", "GDP"] else ',.0f'
         tooltip_list = [
             alt.Tooltip('Group:N', title='Group'),
@@ -697,19 +711,16 @@ elif plot_mode == "Error Analysis":
             'X_Value', 'Y_Value', groupby=['Group']
         ).mark_line()
 
-        st.altair_chart((scatter + trend), use_container_width=True)
+        # NEW: Set height property to make the chart taller
+        chart = (scatter + trend).properties(height=700)
+        st.altair_chart(chart, use_container_width=True)
         
         # --- SUMMARY STATISTICS TABLE ---
         st.subheader("Summary Statistics by Group")
         
-        # UPDATED: Add new values to the summary table
         summary_cols = grouping_vars + [
-            'GeoName', 
-            'Original ENOW Value', 
-            'Open ENOW Estimate',
-            'Mean Percent Difference', 
-            'Mean Absolute Error', 
-            'Root Mean Squared Error'
+            'GeoName', 'Original ENOW Value', 'Open ENOW Estimate',
+            'Mean Percent Difference', 'Mean Absolute Error', 'Root Mean Squared Error'
         ]
         summary_table = results_df[summary_cols].copy()
         
@@ -717,12 +728,9 @@ elif plot_mode == "Error Analysis":
             lambda x: f'{x:,.2f}%' if pd.notna(x) else 'N/A'
         )
         
-        # UPDATED: Format new value columns along with error metric columns
         value_and_error_cols = [
-            'Original ENOW Value', 
-            'Open ENOW Estimate', 
-            'Mean Absolute Error', 
-            'Root Mean Squared Error'
+            'Original ENOW Value', 'Open ENOW Estimate', 
+            'Mean Absolute Error', 'Root Mean Squared Error'
         ]
         for col in value_and_error_cols:
             if x_axis_choice in ["Wages", "GDP"]:
@@ -944,6 +952,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
