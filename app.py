@@ -602,36 +602,6 @@ if plot_mode in estimate_modes:
         st.markdown(f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>", unsafe_allow_html=True)
     if change_message:
         st.markdown(f"<p style='font-size: 18px; text-align: center;'>{change_message}</p>", unsafe_allow_html=True)
-
-    # --- START: ADDED EXPANDER FOR SECTOR DETAILS (NAICS TABLE) ---
-    # This block displays detailed information about a sector when a single one is selected.
-    if selected_sector != "All Marine Sectors":
-        if selected_sector in SECTOR_DESCRIPTIONS:
-            expander_title = f"The {selected_sector} Sector in Open ENOW"
-            with st.expander(expander_title):
-                st.divider()
-                sector_info = SECTOR_DESCRIPTIONS[selected_sector]
-                st.write(sector_info['description'])
-
-                # Define a function to apply styles to the DataFrame rows
-                def style_naics_table(row):
-                    # Inactive year rows are styled in gray
-                    gray_style = 'background-color: #f0f0f0' 
-                    years_val = row['Years']
-                    is_active = (years_val == "All years") or (years_val.endswith("- present"))
-                    if not is_active:
-                        return [gray_style for _ in row]
-                    
-                    # Default: No style for any other row
-                    return ['' for _ in row]
-
-                # Apply the styling function to the dataframe before displaying it
-                st.dataframe(
-                    sector_info['table'].style.apply(style_naics_table, axis=1),
-                    use_container_width=True,
-                    hide_index=True
-                )
-    # --- END: ADDED EXPANDER FOR SECTOR DETAILS ---
     
     if not chart_data_to_download.empty:
         with st.expander("View as a Table"):
@@ -671,7 +641,6 @@ if plot_mode in estimate_modes:
     
     if plot_mode != "County Estimates from Public QCEW Data":
         with st.expander(expander_title):
-            st.divider()
             # Logic for "State Estimates" mode
             if plot_mode == "State Estimates from Public QCEW Data":
                 if selected_geo == "All Coastal States":
@@ -709,11 +678,37 @@ if plot_mode in estimate_modes:
                 st.write("Open ENOW splits coastal states into 8 regions. The <strong>Great Lakes</strong> region is the coastal counties/zip codes of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The <strong>Northeast</strong> region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The <strong>Mid-Atlantic</strong> region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The <strong>Southeast</strong> region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The <strong>Gulf</strong> region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The <strong>West</strong> region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the <strong>Pacific</strong> region.")
     # --- END: MODIFIED EXPANDER ---
 
+    # --- START: ADDED EXPANDER FOR SECTOR DETAILS (NAICS TABLE) ---
+    # This block displays detailed information about a sector when a single one is selected.
+    if selected_sector != "All Marine Sectors":
+        if selected_sector in SECTOR_DESCRIPTIONS:
+            expander_title = f"The {selected_sector} Sector in Open ENOW"
+            with st.expander(expander_title):
+                sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                st.write(sector_info['description'])
 
+                # Define a function to apply styles to the DataFrame rows
+                def style_naics_table(row):
+                    # Inactive year rows are styled in gray
+                    gray_style = 'background-color: #f0f0f0' 
+                    years_val = row['Years']
+                    is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                    if not is_active:
+                        return [gray_style for _ in row]
+                    
+                    # Default: No style for any other row
+                    return ['' for _ in row]
+
+                # Apply the styling function to the dataframe before displaying it
+                st.dataframe(
+                    sector_info['table'].style.apply(style_naics_table, axis=1),
+                    use_container_width=True,
+                    hide_index=True
+                )
+    # --- END: ADDED EXPANDER FOR SECTOR DETAILS ---
     
     metric_expander_title = f"{selected_display_metric} in Open ENOW"
     with st.expander(metric_expander_title):
-        st.divider()
         st.write(METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available."))
 
 elif plot_mode == "Error Analysis":
@@ -1053,6 +1048,7 @@ else: # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
