@@ -578,12 +578,17 @@ elif plot_mode == "Error Analysis":
         index=0
     )
 
-    # Grouping for trendlines and colors
-    grouping_choice = st.sidebar.selectbox(
-        "Group By:",
-        ("OceanSector", "OceanIndustry", "Year"), # NEW: Added "Year"
-        index=0
-    )
+    # UPDATED: Replaced dropdown with checkboxes for grouping
+    st.sidebar.subheader("Group By:")
+    grouping_vars = []
+    if st.sidebar.checkbox("OceanSector", value=True):
+        grouping_vars.append("OceanSector")
+    if st.sidebar.checkbox("OceanIndustry", value=False):
+        grouping_vars.append("OceanIndustry")
+    if st.sidebar.checkbox("Year", value=False):
+        grouping_vars.append("Year")
+    if st.sidebar.checkbox("State", value=False):
+        grouping_vars.append("state") # The column name is 'state'
 
     # Data filters
     st.sidebar.markdown("---")
@@ -594,7 +599,6 @@ elif plot_mode == "Error Analysis":
         "Select Year Range:", min_year, max_year, (min_year, max_year), 1
     )
     
-    # Create a map from state name to state abbreviation for filtering
     state_df = active_df[active_df['GeoScale'] == 'State']
     state_names = ["All Coastal States"] + sorted(state_df["GeoName"].dropna().unique())
     state_abbr_map = {"All Coastal States": "All"}
@@ -603,13 +607,14 @@ elif plot_mode == "Error Analysis":
     selected_state_name = st.sidebar.selectbox("Filter by State:", state_names)
     selected_state_abbr = state_abbr_map[selected_state_name]
 
-
     sector_names = ["All Marine Sectors"] + sorted(active_df["OceanSector"].dropna().unique())
     selected_sector_filter = st.sidebar.selectbox("Filter by Sector:", sector_names)
 
     # --- DATA PROCESSING ---
-    
-    # Base filtering
+    if not grouping_vars:
+        st.warning("Please select at least one 'Group By' option.")
+        st.stop()
+        
     filtered_df = active_df[
         (active_df['aggregation'] == selected_agg) &
         (active_df['GeoScale'] == selected_geoscale) &
@@ -617,92 +622,71 @@ elif plot_mode == "Error Analysis":
         (active_df['Year'] <= year_range[1])
     ].copy()
 
-    # UPDATED: State filtering logic
     if selected_state_name != "All Coastal States":
-        # This now correctly filters for counties within the selected state
         filtered_df = filtered_df[filtered_df['state'] == selected_state_abbr]
 
     if selected_sector_filter != "All Marine Sectors":
         filtered_df = filtered_df[filtered_df['OceanSector'] == selected_sector_filter]
 
-    # Define metric columns based on user choice
-    x_metric_map = {
-        "Employment": "Employment",
-        "Wages": "Wages",
-        "GDP": "GDP"
-    }
+    x_metric_map = {"Employment": "Employment", "Wages": "Wages", "GDP": "GDP"}
     metric_suffix = x_metric_map[x_axis_choice]
     open_col = f"Open_{metric_suffix}"
     enow_col = f"oldENOW_{metric_suffix}"
 
-    # Calculate metrics for each group
     results = []
-    
-    # Each point on the plot represents a GeoName within a chosen group
-    grouping_cols = [grouping_choice, 'GeoName']
+    # Each point on the plot represents a GeoName within the selected combination of groups
+    grouping_cols = grouping_vars + ['GeoName']
     
     for name, group_df in filtered_df.groupby(grouping_cols):
-        
-        # Ensure we have data to compare
         group_df = group_df.dropna(subset=[enow_col, open_col])
-        if group_df.empty:
-            continue
+        if group_df.empty: continue
 
-        # Avoid division by zero for percent difference
         valid_enow = group_df[group_df[enow_col] != 0]
-        if valid_enow.empty:
-             mpd = np.nan
-        else:
-             pct_diff = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
-             mpd = pct_diff.mean()
-
-        mae = mean_absolute_error(group_df[enow_col], group_df[open_col])
-        rmse = np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
+        mpd = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
         
-        x_val = (group_df[enow_col].mean() + group_df[open_col].mean()) / 2
-
         result_row = {
-            grouping_choice: name[0],
-            'GeoName': name[1],
-            'X_Value': x_val,
-            'Mean Percent Difference': mpd,
-            'Mean Absolute Error': mae,
-            'Root Mean Squared Error': rmse
+            'X_Value': (group_df[enow_col].mean() + group_df[open_col].mean()) / 2,
+            'Mean Percent Difference': mpd.mean() if not mpd.empty else np.nan,
+            'Mean Absolute Error': mean_absolute_error(group_df[enow_col], group_df[open_col]),
+            'Root Mean Squared Error': np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
         }
+        
+        # Populate the grouping columns dynamically
+        for i, col in enumerate(grouping_vars):
+            result_row[col] = name[i]
+        result_row['GeoName'] = name[len(grouping_vars)]
+        
         results.append(result_row)
         
     if results:
         results_df = pd.DataFrame(results)
-        # Assign the chosen Y-axis metric to the 'Y_Value' column for plotting
         results_df['Y_Value'] = results_df[y_axis_choice]
         results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
-        
-        # UPDATED: Filter for positive values before plotting on a log scale
         results_df = results_df[results_df['X_Value'] > 0]
+
+        # Create a single 'Group' column for coloring and trendlines
+        results_df['Group'] = results_df[grouping_vars].astype(str).agg(' - '.join, axis=1)
         
         # --- PLOTTING ---
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
-        
-        # If grouping by Year, ensure Year is treated as discrete for coloring
-        color_encoding_type = 'O' if grouping_choice == 'Year' else 'N'
+
+        # Dynamically create the tooltip
+        tooltip_list = [alt.Tooltip('Group:N', title='Group')]
+        tooltip_list.append(alt.Tooltip('GeoName:N', title='Geography'))
+        tooltip_list.append(alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'))
+        tooltip_list.append(alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f'))
 
         scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
-            # UPDATED: Added scale=alt.Scale(type="log") to the X-axis encoding
             x=alt.X('X_Value:Q', 
                     scale=alt.Scale(type="log"), 
                     title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
             y=alt.Y('Y_Value:Q', title=y_axis_choice),
-            color=alt.Color(f'{grouping_choice}:{color_encoding_type}', legend=alt.Legend(title="Group")),
-            tooltip=[
-                alt.Tooltip(f'{grouping_choice}:{color_encoding_type}', title='Group'),
-                alt.Tooltip('GeoName:N', title='Geography'),
-                alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'),
-                alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f')
-            ]
+            color=alt.Color('Group:N', legend=alt.Legend(title="Group")),
+            tooltip=tooltip_list
         ).interactive()
 
         trend = scatter.transform_regression(
-            'X_Value', 'Y_Value', groupby=[grouping_choice]
+            'X_Value', 'Y_Value', groupby=['Group']
         ).mark_line()
 
         st.altair_chart((scatter + trend), use_container_width=True)
@@ -710,16 +694,9 @@ elif plot_mode == "Error Analysis":
         # --- SUMMARY STATISTICS TABLE ---
         st.subheader("Summary Statistics by Group")
         
-        # Prepare table for display
-        summary_table = results_df[[
-            grouping_choice,
-            'GeoName',
-            'Mean Percent Difference',
-            'Mean Absolute Error',
-            'Root Mean Squared Error'
-        ]].copy()
+        summary_cols = grouping_vars + ['GeoName', 'Mean Percent Difference', 'Mean Absolute Error', 'Root Mean Squared Error']
+        summary_table = results_df[summary_cols].copy()
         
-        # Formatting for better readability
         summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map('{:,.2f}%'.format)
         
         currency_metrics = ['Mean Absolute Error', 'Root Mean Squared Error']
@@ -729,7 +706,7 @@ elif plot_mode == "Error Analysis":
             else:
                  summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}")
 
-        st.dataframe(summary_table, use_container_width=True)
+        st.dataframe(summary_table.sort_values(by=grouping_vars), use_container_width=True)
 
     else:
         st.warning("No data available for the selected filters. Please broaden your criteria.")
@@ -943,5 +920,6 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
