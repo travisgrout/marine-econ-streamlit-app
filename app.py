@@ -584,7 +584,7 @@ if plot_mode in estimate_modes:
     if change_message:
         st.markdown(f"<p style='font-size: 18px; text-align: center;'>{change_message}</p>", unsafe_allow_html=True)
 
-    # --- START: MODIFICATION - "VIEW AS TABLE" EXPANDER AND DOWNLOAD BUTTON ---
+    # --- START: "VIEW AS TABLE" EXPANDER AND DOWNLOAD BUTTON ---
     if not chart_data_to_download.empty:
         with st.expander("View as a Table"):
             table_df = None
@@ -629,9 +629,6 @@ if plot_mode in estimate_modes:
                 )
     # --- END: MODIFICATION ---
 
-    # --- START: MODIFICATION - REMOVED DIVIDER ---
-    st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
-    # --- END: MODIFICATION ---
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
@@ -1058,3 +1055,4 @@ else: # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
