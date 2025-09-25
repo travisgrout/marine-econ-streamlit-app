@@ -5,6 +5,7 @@ import altair as alt
 from textwrap import wrap
 import os
 from sklearn.metrics import mean_absolute_error, mean_squared_error
+import re # Imported for cleaning filenames
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -285,19 +286,22 @@ def update_mode(mode_label):
 
 # --- START: RESTRUCTURED BUTTON LAYOUT ---
 st.sidebar.header("Public Displays")
+# --- MODIFICATION 2: Swapped "States" and "Regions" buttons ---
 # Create a row of 2 for the first two buttons
 row1_cols = st.sidebar.columns(2)
 with row1_cols[0]:
-    is_selected = st.session_state.plot_mode == button_map["States"]
-    st.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
+    is_selected = st.session_state.plot_mode == button_map["Regions"]
+    st.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
 with row1_cols[1]:
     is_selected = st.session_state.plot_mode == button_map["Counties"]
     st.button("Counties", on_click=update_mode, args=("Counties",), use_container_width=True, type="primary" if is_selected else "secondary")
 
 # Place the third button on its own line
-is_selected = st.session_state.plot_mode == button_map["Regions"]
-st.sidebar.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
+is_selected = st.session_state.plot_mode == button_map["States"]
+st.sidebar.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
 
+# --- MODIFICATION 3(a): Added divider above "Reviewer Displays" ---
+st.sidebar.divider() 
 
 st.sidebar.header("Reviewer Displays (Temporary)")
 rev_cols = st.sidebar.columns(2)
@@ -308,6 +312,9 @@ with rev_cols[1]:
     is_selected = st.session_state.plot_mode == button_map["Error Analysis"]
     st.button("Error Analysis", on_click=update_mode, args=("Error Analysis",), use_container_width=True, type="primary" if is_selected else "secondary", help="Analyze differences between Open ENOW and original ENOW")
 # --- END: RESTRUCTURED BUTTON LAYOUT ---
+
+# --- MODIFICATION 3(b): Added divider above filter section ---
+st.sidebar.divider() 
 
 plot_mode = st.session_state.plot_mode
 
@@ -476,20 +483,27 @@ if plot_mode in estimate_modes:
             }
             summary_message = summary_text_templates.get(selected_display_metric)
 
+    # --- Charting Logic Starts ---
+    chart_data_to_download = pd.DataFrame() # Initialize an empty df
+
     if selected_sector == "All Marine Sectors":
         plot_df = base_filtered_df[["Year", "OceanSector", open_metric_col]].copy()
         plot_df.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
         plot_df.dropna(subset=["Estimate_value"], inplace=True)
+        
+        chart_data_to_download = plot_df.copy() # Assign data for download
+
         if is_currency:
             plot_df["Estimate_value"] /= 1e6
         if not plot_df.empty:
             chart = alt.Chart(plot_df).mark_bar().encode(
                 x=alt.X('Year:O', title='Year'),
-                y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero'),
+                y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero', 
+                        axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(a): Simplify y-axis ---
                 color=alt.Color('OceanSector:N', scale=alt.Scale(domain=sorted_sector_names, range=colors_list), legend=alt.Legend(title="Sectors")),
                 tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('OceanSector:N', title='Sector'), alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)]
             ).properties(
-                height=600 # --- MODIFICATION 2(a): Increased plot height ---
+                height=600
             ).configure_axis(labelFontSize=14, titleFontSize=16).configure_legend(symbolLimit=len(sorted_sector_names))
             st.altair_chart(chart, use_container_width=True)
         else:
@@ -504,6 +518,9 @@ if plot_mode in estimate_modes:
                 source_df['GeoContribution'] = np.where(source_df['rank'] <= 3, source_df['GeoName'], other_geo_text)
                 plot_df_geos = source_df.groupby(['Year', 'GeoContribution'])[open_metric_col].sum().reset_index()
                 plot_df_geos.rename(columns={open_metric_col: "Estimate_value"}, inplace=True)
+
+                chart_data_to_download = plot_df_geos.copy() # Assign data for download
+                
                 if is_currency:
                     plot_df_geos["Estimate_value"] /= 1e6
                 unique_contributors = sorted([c for c in plot_df_geos['GeoContribution'].unique() if c != other_geo_text])
@@ -511,11 +528,12 @@ if plot_mode in estimate_modes:
                 color_range = get_sector_colors(len(unique_contributors)) + ["#A5AAAF"]
                 chart = alt.Chart(plot_df_geos).mark_bar().encode(
                     x=alt.X('Year:O', title='Year'),
-                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
+                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
+                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(b): Simplify y-axis ---
                     color=alt.Color('GeoContribution:N', legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"), sort=sort_order, scale=alt.Scale(domain=sort_order, range=color_range)),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('GeoContribution:N', title='Contribution'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
-                    height=600 # --- MODIFICATION 2(b): Increased plot height ---
+                    height=600 
                 ).configure_axis(labelFontSize=14, titleFontSize=16).configure_legend(symbolLimit=31)
                 st.altair_chart(chart, use_container_width=True)
             else:
@@ -523,20 +541,42 @@ if plot_mode in estimate_modes:
         else:
             bar_df = base_filtered_df.groupby("Year")[open_metric_col].sum().reset_index()
             bar_df.rename(columns={open_metric_col: 'Estimate_value'}, inplace=True)
+            
+            chart_data_to_download = bar_df.copy() # Assign data for download
+
             if not bar_df.empty:
                 if is_currency:
                     bar_df["Estimate_value"] /= 1e6
                 sector_color = sector_color_map.get(selected_sector, "#808080")
                 chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
                     x=alt.X('Year:O', title='Year'),
-                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
+                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
+                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(c): Simplify y-axis ---
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
-                    height=600 # --- MODIFICATION 2(c): Increased and standardized plot height ---
+                    height=600
                 ).configure_axis(labelFontSize=14, titleFontSize=16)
                 st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
+
+    # --- MODIFICATION 4: Add download button logic ---
+    if not chart_data_to_download.empty:
+        csv_data = convert_df_to_csv(chart_data_to_download)
+        
+        # Clean strings for use in the filename
+        safe_geo = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_geo))
+        safe_sector = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_sector))
+        
+        file_name = f"OpenENOW_{safe_geo}_{safe_sector}_{year_range[0]}_{year_range[1]}.csv"
+        
+        st.download_button(
+           label="📥 Download Plot Data as CSV",
+           data=csv_data,
+           file_name=file_name,
+           mime='text/csv',
+        )
+
 
     if summary_message:
         st.markdown(f"<p style='font-size: 24px; text-align: center; font-weight: normal;'>{summary_message}</p>", unsafe_allow_html=True)
@@ -572,7 +612,7 @@ elif plot_mode == "Error Analysis":
     st.title("Error Analysis: Open ENOW vs. Original ENOW")
 
     # --- SIDEBAR FILTERS ---
-    st.sidebar.markdown("---")
+    # st.sidebar.markdown("---") # Replaced by divider
     st.sidebar.header("Plot Configuration")
 
     # Granularity filters
