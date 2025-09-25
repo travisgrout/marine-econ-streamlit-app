@@ -556,7 +556,7 @@ elif plot_mode == "Error Analysis":
         st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
         st.stop()
 
-    st.title("Error Analysis: Open ENOW vs. Original ENow")
+    st.title("Error Analysis: Open ENOW vs. Original ENOW")
 
     # --- SIDEBAR FILTERS ---
     st.sidebar.markdown("---")
@@ -590,7 +590,7 @@ elif plot_mode == "Error Analysis":
     if st.sidebar.checkbox("State", value=False):
         grouping_vars.append("state") # The column name is 'state'
 
-    # NEW: Added toggle to exclude outliers
+    # Added toggle to exclude outliers
     exclude_outliers = st.sidebar.checkbox("Exclude Outliers", value=False)
 
     # Data filters
@@ -667,7 +667,6 @@ elif plot_mode == "Error Analysis":
         results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
         results_df = results_df[results_df['X_Value'] > 0]
 
-        # NEW: Outlier exclusion logic
         if exclude_outliers and not results_df.empty:
             Q1 = results_df['Y_Value'].quantile(0.25)
             Q3 = results_df['Y_Value'].quantile(0.75)
@@ -707,12 +706,26 @@ elif plot_mode == "Error Analysis":
             tooltip=tooltip_list
         ).interactive()
 
-        trend = scatter.transform_regression(
-            'X_Value', 'Y_Value', groupby=['Group']
-        ).mark_line()
+        # UPDATED: Conditional trend line with confidence interval
+        if selected_sector_filter != "All Marine Sectors":
+            # When a single sector is selected, show a smoothed trend with confidence interval
+            st.info("ℹ️ A smoothed trend line (LOESS) with a 95% confidence interval is shown for single-sector analysis.")
+            
+            # Define the LOESS transformation
+            loess_transform = scatter.transform_loess('X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8)
 
-        # NEW: Set height property to make the chart taller
-        chart = (scatter + trend).properties(height=700)
+            # Create the confidence interval band and the trend line from the transformation
+            confidence_interval = loess_transform.mark_errorband(extent='ci')
+            trend_line = loess_transform.mark_line(opacity=0.8)
+            
+            chart = (scatter + confidence_interval + trend_line).properties(height=700)
+        else:
+            # For all sectors, show the standard linear regression line
+            trend_line = scatter.transform_regression(
+                'X_Value', 'Y_Value', groupby=['Group']
+            ).mark_line()
+            chart = (scatter + trend_line).properties(height=700)
+
         st.altair_chart(chart, use_container_width=True)
         
         # --- SUMMARY STATISTICS TABLE ---
@@ -952,6 +965,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
