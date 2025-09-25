@@ -470,7 +470,7 @@ if plot_mode in estimate_modes:
         if not plot_df.empty:
             chart = alt.Chart(plot_df).mark_bar().encode(
                 x=alt.X('Year:O', title='Year'),
-                y=alt.Y('sum(Estimate_value):Q', title=y_label),
+                y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero'),
                 color=alt.Color('OceanSector:N', scale=alt.Scale(domain=sorted_sector_names, range=colors_list), legend=alt.Legend(title="Sectors")),
                 tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('OceanSector:N', title='Sector'), alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)]
             ).configure_axis(labelFontSize=14, titleFontSize=16).configure_legend(symbolLimit=len(sorted_sector_names))
@@ -510,7 +510,7 @@ if plot_mode in estimate_modes:
                 sector_color = sector_color_map.get(selected_sector, "#808080")
                 chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
                     x=alt.X('Year:O', title='Year'),
-                    y=alt.Y('Estimate_value:Q', title=y_label),
+                    y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(height=500).configure_axis(labelFontSize=14, titleFontSize=16)
                 st.altair_chart(chart, use_container_width=True)
@@ -749,3 +749,4 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
