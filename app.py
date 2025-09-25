@@ -250,7 +250,7 @@ button_map = {
     "Counties": "County Estimates from Public QCEW Data",
     "Regions": "Regional Estimates from Public QCEW Data",
     "Compare": "Compare to original ENOW",
-    "Error Analysis": "Error Analysis" # NEW: Added Error Analysis mode
+    "Error Analysis": "Error Analysis"
 }
 
 # Initialize session state for the plot mode
@@ -295,7 +295,7 @@ with cols2[1]:
     is_selected = st.session_state.plot_mode == button_map["Compare"]
     st.button("Compare", on_click=update_mode, args=("Compare",), use_container_width=True, type="primary" if is_selected else "secondary", help="Compare to original ENOW")
 
-# NEW: Add the fifth button for Error Analysis
+# Add the fifth button for Error Analysis
 cols3 = st.sidebar.columns(2)
 with cols3[0]:
     is_selected = st.session_state.plot_mode == button_map["Error Analysis"]
@@ -549,7 +549,7 @@ if plot_mode in estimate_modes:
         st.divider()
         st.write(METRIC_DESCRIPTIONS.get(selected_display_metric, "No description available."))
 
-# --- START: NEW 'Error Analysis' MODE ---
+# --- START: REVISED 'Error Analysis' MODE ---
 elif plot_mode == "Error Analysis":
     active_df = comparison_data
     if active_df is None:
@@ -581,7 +581,7 @@ elif plot_mode == "Error Analysis":
     # Grouping for trendlines and colors
     grouping_choice = st.sidebar.selectbox(
         "Group By:",
-        ("OceanSector", "OceanIndustry"),
+        ("OceanSector", "OceanIndustry", "Year"), # NEW: Added "Year"
         index=0
     )
 
@@ -593,9 +593,16 @@ elif plot_mode == "Error Analysis":
     year_range = st.sidebar.slider(
         "Select Year Range:", min_year, max_year, (min_year, max_year), 1
     )
+    
+    # Create a map from state name to state abbreviation for filtering
+    state_df = active_df[active_df['GeoScale'] == 'State']
+    state_names = ["All Coastal States"] + sorted(state_df["GeoName"].dropna().unique())
+    state_abbr_map = {"All Coastal States": "All"}
+    state_abbr_map.update(pd.Series(state_df.state.values, index=state_df.GeoName).to_dict())
 
-    state_names = ["All Coastal States"] + sorted(active_df[active_df['GeoScale'] == 'State']["GeoName"].dropna().unique())
     selected_state_name = st.sidebar.selectbox("Filter by State:", state_names)
+    selected_state_abbr = state_abbr_map[selected_state_name]
+
 
     sector_names = ["All Marine Sectors"] + sorted(active_df["OceanSector"].dropna().unique())
     selected_sector_filter = st.sidebar.selectbox("Filter by Sector:", sector_names)
@@ -610,8 +617,10 @@ elif plot_mode == "Error Analysis":
         (active_df['Year'] <= year_range[1])
     ].copy()
 
+    # UPDATED: State filtering logic
     if selected_state_name != "All Coastal States":
-        filtered_df = filtered_df[filtered_df['GeoName'] == selected_state_name]
+        # This now correctly filters for counties within the selected state
+        filtered_df = filtered_df[filtered_df['state'] == selected_state_abbr]
 
     if selected_sector_filter != "All Marine Sectors":
         filtered_df = filtered_df[filtered_df['OceanSector'] == selected_sector_filter]
@@ -658,25 +667,28 @@ elif plot_mode == "Error Analysis":
             'X_Value': x_val,
             'Mean Percent Difference': mpd,
             'Mean Absolute Error': mae,
-            'Root Mean Squared Error': rmse,
-            'Y_Value': 0 # Placeholder
+            'Root Mean Squared Error': rmse
         }
         results.append(result_row)
         
     if results:
-        results_df = pd.DataFrame(results).dropna(subset=['Y_Value', 'X_Value'])
+        results_df = pd.DataFrame(results)
         # Assign the chosen Y-axis metric to the 'Y_Value' column for plotting
         results_df['Y_Value'] = results_df[y_axis_choice]
+        results_df = results_df.dropna(subset=['Y_Value', 'X_Value'])
         
         # --- PLOTTING ---
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
+        
+        # If grouping by Year, ensure Year is treated as discrete for coloring
+        color_encoding_type = 'O' if grouping_choice == 'Year' else 'N'
 
         scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
             x=alt.X('X_Value:Q', title=f'Mean of Original and Open ENOW {x_axis_choice}'),
             y=alt.Y('Y_Value:Q', title=y_axis_choice),
-            color=alt.Color(f'{grouping_choice}:N', legend=alt.Legend(title="Group")),
+            color=alt.Color(f'{grouping_choice}:{color_encoding_type}', legend=alt.Legend(title="Group")),
             tooltip=[
-                alt.Tooltip(f'{grouping_choice}:N', title='Group'),
+                alt.Tooltip(f'{grouping_choice}:{color_encoding_type}', title='Group'),
                 alt.Tooltip('GeoName:N', title='Geography'),
                 alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'),
                 alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f')
@@ -716,7 +728,7 @@ elif plot_mode == "Error Analysis":
     else:
         st.warning("No data available for the selected filters. Please broaden your criteria.")
 
-# --- END: NEW 'Error Analysis' MODE ---
+# --- END: REVISED 'Error Analysis' MODE ---
 
 else:  # "Compare to original ENOW"
     active_df = comparison_data
@@ -925,3 +937,4 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
