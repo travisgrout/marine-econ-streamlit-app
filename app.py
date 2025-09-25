@@ -250,7 +250,7 @@ st.markdown("""
     /* --- Custom Tab Styling --- */
     /* (1) Make tab titles larger */
     button[data-baseweb="tab"] {
-        font-size: 2.25rem; /* Increase font size */
+        font-size: 20rem; /* Increase font size */
         font-weight: 800;   /* Make font bolder */
         padding: 10px 15px; /* Add some padding */
     }
@@ -458,4 +458,5 @@ with tab_error:
     # ... (Rest of the error analysis filters and logic) ...
     st.title("Error Analysis: Open ENOW vs. Original ENOW")
     st.info("The Error Analysis display is under construction.")
+
 
