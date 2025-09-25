@@ -255,7 +255,7 @@ button_map = {
 if 'plot_mode' not in st.session_state:
     st.session_state.plot_mode = button_map["States"]
 
-# --- START: FINAL CSS FOR SEGMENTED BUTTON (MATCHES YOUR HTML) ---
+# --- START: FINAL CSS WITH !IMPORTANT FIX ---
 st.markdown("""
 <style>
     /* Set sidebar background color to NOAA Pale Sea Blue */
@@ -264,33 +264,32 @@ st.markdown("""
     }
 
     /* --- Segmented Button CSS --- */
-    /* This targets the main container and turns it into a flexbox.
-       This is the KEY fix that gets all segments onto a single line. */
+    /* This targets the main container and turns it into a flexbox. */
     div[data-testid="stRadio"] {
-        display: flex;
+        display: flex !important;
         border: 1px solid #B0B0B0;
         border-radius: 5px;
-        overflow: hidden; /* Ensures child elements respect the rounded corners */
+        overflow: hidden;
     }
 
-    /* Hide the actual radio button circle that Streamlit renders */
+    /* Forcefully hide the actual radio button circle that Streamlit renders */
     div[data-testid="stRadio"] input[type="radio"] {
-        display: none;
+        display: none !important;
     }
 
     /* Style each label to act as a button segment */
     div[data-testid="stRadio"] label {
-        flex: 1; /* Makes each segment take up equal horizontal space */
+        flex: 1;
         text-align: center;
         padding: 6px 0;
-        margin: 0 !important; /* Overrides any default margin */
+        margin: 0 !important;
         cursor: pointer;
         transition: background-color 0.3s, color 0.3s;
         
         /* Default, non-selected state */
-        background-color: #DDDDDD; /* Grey */
-        color: black;
-        border-right: 1px solid #B0B0B0; /* Separator line */
+        background-color: #DDDDDD !important;
+        color: black !important;
+        border-right: 1px solid #B0B0B0;
     }
 
     /* Remove the separator line from the very last segment */
@@ -298,17 +297,16 @@ st.markdown("""
         border-right: none;
     }
     
-    /* Style the SELECTED label using the powerful :has() pseudo-class.
-       This says "Find a label that has a checked radio button inside it." */
+    /* Style the SELECTED label using the :has() pseudo-class */
     div[data-testid="stRadio"] label:has(input[type="radio"]:checked) {
-        background-color: #003087; /* NOAA Sky */
-        color: white;
-        font-weight: bold;
+        background-color: #003087 !important; /* NOAA Sky */
+        color: white !important;
+        font-weight: bold !important;
     }
     
-    /* Ensure the text itself (which is in a child div) also gets the correct color */
+    /* Ensure the text itself (in a child div) also gets the correct color */
     div[data-testid="stRadio"] label:has(input[type="radio"]:checked) div {
-        color: white;
+        color: white !important;
     }
 
     /* --- Reviewer Display Buttons CSS --- */
@@ -336,27 +334,25 @@ st.sidebar.header("Public Displays")
 public_display_options = ["Regions", "States", "Counties"]
 
 # Determine the default index for the radio button based on the current session state.
-# This makes the UI consistent when switching between display types.
 current_mode_value = st.session_state.plot_mode
-current_mode_key = 'States'  # A safe default if the current mode isn't a public one
+current_mode_key = 'States'
 for key, value in button_map.items():
     if value == current_mode_value and key in public_display_options:
         current_mode_key = key
         break
 default_index = public_display_options.index(current_mode_key)
 
-# Create the radio button widget. When a user clicks it, the script reruns.
+# Create the radio button widget.
 selected_display = st.sidebar.radio(
-    "Public Display Mode", # This label is hidden but is good for accessibility
+    "Public Display Mode",
     options=public_display_options,
     index=default_index,
     horizontal=True,
     label_visibility="collapsed",
-    key="public_display_radio" # Explicit key to prevent errors
+    key="public_display_radio"
 )
 
-# Logic to update state: The radio button only takes control if a public display is already active.
-# This prevents it from overriding a reviewer mode selection.
+# Logic to update state.
 public_modes = [button_map["Regions"], button_map["States"], button_map["Counties"]]
 if st.session_state.plot_mode in public_modes:
     st.session_state.plot_mode = button_map[selected_display]
