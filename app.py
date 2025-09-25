@@ -33,14 +33,20 @@ def load_comparison_data():
             "oldENOW_employment": "oldENOW_Employment",
             "oldENOW_wages": "oldENOW_Wages",
             "oldENOW_GDP": "oldENOW_GDP",
-            "oldENOW_RealGDP": "oldENOW_RealGDP"
+            "oldENOW_RealGDP": "oldENOW_RealGDP",
+            "noimpute_establishments": "noimpute_Establishments",
+            "noimpute_employment": "noimpute_Employment",
+            "noimpute_wages": "noimpute_Wages",
+            "noimpute_GDP": "noimpute_GDP",
+            "noimpute_RealGDP": "noimpute_RealGDP"
         }
         df.rename(columns=rename_dict, inplace=True)
 
         # CONVERT METRIC COLUMNS TO NUMERIC
         metric_cols_to_convert = [
             'Open_Establishments', 'Open_Employment', 'Open_Wages', 'Open_GDP', 'Open_RealGDP',
-            'oldENOW_Establishments', 'oldENOW_Employment', 'oldENOW_Wages', 'oldENOW_GDP', 'oldENOW_RealGDP'
+            'oldENOW_Establishments', 'oldENOW_Employment', 'oldENOW_Wages', 'oldENOW_GDP', 'oldENOW_RealGDP',
+            'noimpute_Establishments', 'noimpute_Employment', 'noimpute_Wages', 'noimpute_GDP', 'noimpute_RealGDP'
         ]
         for col in metric_cols_to_convert:
             if col in df.columns:
@@ -632,7 +638,6 @@ else:  # "Compare to original ENOW"
         if selected_sector != "All Marine Sectors":
             base_filtered_df = base_filtered_df[base_filtered_df['OceanSector'] == selected_sector]
 
-
     # --- PLOTTING AND VISUALIZATION ---
     y_label_map = {"GDP (nominal)": "GDP ($ millions)", "Real GDP": "Real GDP ($ millions, 2017)", "Wages (not inflation-adjusted)": "Wages ($ millions)", "Employment": "Employment (Number of Jobs)", "Establishments": "Establishments (Count)"}
     y_label = y_label_map.get(selected_display_metric, selected_display_metric)
@@ -641,26 +646,45 @@ else:  # "Compare to original ENOW"
 
     open_metric_col = f"Open_{selected_metric_internal}"
     enow_metric_col = f"oldENOW_{selected_metric_internal}"
+    noimpute_metric_col = f"noimpute_{selected_metric_internal}"
+    
+    # Ensure all required columns exist before proceeding
+    required_cols = ["Year", enow_metric_col, open_metric_col, noimpute_metric_col]
+    if not all(col in base_filtered_df.columns for col in required_cols):
+        st.warning("One or more data columns required for the chart are missing.")
+        st.stop()
 
-    plot_df = base_filtered_df[["Year", enow_metric_col, open_metric_col]].copy()
+    plot_df = base_filtered_df[required_cols].copy()
     plot_df.rename(columns={
         enow_metric_col: "Original ENOW",
-        open_metric_col: "Open ENOW Estimate"
+        open_metric_col: "Open ENOW Estimate",
+        noimpute_metric_col: "Public QCEW data, no imputated values"
     }, inplace=True)
     
     if is_currency:
-        plot_df[["Original ENOW", "Open ENOW Estimate"]] /= 1e6
+        plot_df.iloc[:, 1:] /= 1e6
 
-    compare_df = plot_df.groupby("Year")[["Original ENOW", "Open ENOW Estimate"]].sum(min_count=1).reset_index()
-    compare_df.dropna(subset=["Original ENOW", "Open ENOW Estimate"], how='all', inplace=True)
+    compare_df = plot_df.groupby("Year").sum(min_count=1).reset_index()
+    
+    # Replace 0 with NaN so that lines with no data don't drop to zero
+    cols_to_check = ["Original ENOW", "Open ENOW Estimate", "Public QCEW data, no imputated values"]
+    for col in cols_to_check:
+        if col in compare_df.columns:
+            compare_df[col] = compare_df[col].replace({0: np.nan})
+
     long_form_df = compare_df.melt('Year', var_name='Source', value_name='Value')
+    long_form_df.dropna(subset=['Value'], inplace=True)
 
-    if not long_form_df.empty and long_form_df['Value'].notna().any():
+
+    if not long_form_df.empty:
         base = alt.Chart(long_form_df).encode(
             x=alt.X('Year:O', title='Year'),
-            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=True)),
+            y=alt.Y('Value:Q', title=y_label, scale=alt.Scale(zero=False)),
             color=alt.Color('Source:N',
-                            scale=alt.Scale(domain=['Original ENOW', 'Open ENOW Estimate'], range=['#D55E00', '#0072B2']),
+                            scale=alt.Scale(
+                                domain=['Original ENOW', 'Open ENOW Estimate', 'Public QCEW data, no imputated values'],
+                                range=['#D55E00', '#0072B2', '#117733']
+                            ),
                             legend=alt.Legend(title="Data Source", orient="bottom")),
             tooltip=[
                 alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Source:N', title='Source'),
@@ -681,22 +705,47 @@ else:  # "Compare to original ENOW"
            file_name=file_name_compare,
            mime='text/csv',
         )
-        valid_compare_df = compare_df.dropna(subset=["Original ENOW", "Open ENOW Estimate"])
-        if not valid_compare_df.empty:
-            mae = mean_absolute_error(valid_compare_df["Original ENOW"], valid_compare_df["Open ENOW Estimate"])
-            rmse = np.sqrt(mean_squared_error(valid_compare_df["Original ENOW"], valid_compare_df["Open ENOW Estimate"]))
-            diff = valid_compare_df["Open ENOW Estimate"] - valid_compare_df["Original ENOW"]
-            pct_diff = (100 * diff / valid_compare_df["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
-
-            summary_text = f"""
-Mean Absolute Error: {format_value(mae, selected_display_metric)}
-Root Mean Squared Error: {format_value(rmse, selected_display_metric)}
-Mean Percent Difference: {pct_diff.mean():.2f}%
-"""
-        else:
-            summary_text = "Not enough data points with both ENOW and Estimate values to calculate summary statistics."
-
+        
+        # --- Summary Statistics ---
         st.subheader("Summary Statistics")
-        st.code(summary_text, language='text')
+
+        # For Open ENOW Estimate
+        valid_compare_open = compare_df.dropna(subset=["Original ENOW", "Open ENOW Estimate"])
+        if not valid_compare_open.empty:
+            mae_open = mean_absolute_error(valid_compare_open["Original ENOW"], valid_compare_open["Open ENOW Estimate"])
+            rmse_open = np.sqrt(mean_squared_error(valid_compare_open["Original ENOW"], valid_compare_open["Open ENOW Estimate"]))
+            diff_open = valid_compare_open["Open ENOW Estimate"] - valid_compare_open["Original ENOW"]
+            pct_diff_open = (100 * diff_open / valid_compare_open["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
+            st.markdown("##### Open ENOW Estimate (with imputed values)")
+            summary_text_open = f"""
+- **Mean Absolute Error:** {format_value(mae_open, selected_display_metric)}
+- **Root Mean Squared Error:** {format_value(rmse_open, selected_display_metric)}
+- **Mean Percent Difference:** {pct_diff_open.mean():.2f}%
+"""
+            st.markdown(summary_text_open)
+        else:
+            st.markdown("##### Open ENOW Estimate (with imputed values)")
+            st.warning("Not enough overlapping data to calculate statistics.")
+            
+        # For No Imputation Estimate
+        valid_compare_noimpute = compare_df.dropna(subset=["Original ENOW", "Public QCEW data, no imputated values"])
+        if not valid_compare_noimpute.empty:
+            mae_noimpute = mean_absolute_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputated values"])
+            rmse_noimpute = np.sqrt(mean_squared_error(valid_compare_noimpute["Original ENOW"], valid_compare_noimpute["Public QCEW data, no imputated values"]))
+            diff_noimpute = valid_compare_noimpute["Public QCEW data, no imputated values"] - valid_compare_noimpute["Original ENOW"]
+            pct_diff_noimpute = (100 * diff_noimpute / valid_compare_noimpute["Original ENOW"]).replace([np.inf, -np.inf], np.nan)
+            
+            st.markdown("##### Public QCEW Estimate (no imputed values)")
+            summary_text_noimpute = f"""
+- **Mean Absolute Error:** {format_value(mae_noimpute, selected_display_metric)}
+- **Root Mean Squared Error:** {format_value(rmse_noimpute, selected_display_metric)}
+- **Mean Percent Difference:** {pct_diff_noimpute.mean():.2f}%
+"""
+            st.markdown(summary_text_noimpute)
+        else:
+            st.markdown("##### Public QCEW Estimate (no imputed values)")
+            st.warning("Not enough overlapping data to calculate statistics.")
+
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
