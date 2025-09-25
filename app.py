@@ -255,8 +255,7 @@ button_map = {
 if 'plot_mode' not in st.session_state:
     st.session_state.plot_mode = button_map["States"]
 
-# --- START: MODIFIED CSS FOR SEGMENTED BUTTON (MORE ROBUST) ---
-# Custom CSS to style the sidebar, segmented button, and reviewer buttons
+# --- START: FINAL CSS FOR SEGMENTED BUTTON (MATCHES YOUR HTML) ---
 st.markdown("""
 <style>
     /* Set sidebar background color to NOAA Pale Sea Blue */
@@ -265,72 +264,66 @@ st.markdown("""
     }
 
     /* --- Segmented Button CSS --- */
-    /* This targets the container for the radio buttons */
-    div[data-testid="stRadio"] > div {
-        /* Turns the container into a flexbox */
+    /* This targets the main container and turns it into a flexbox.
+       This is the KEY fix that gets all segments onto a single line. */
+    div[data-testid="stRadio"] {
         display: flex;
-        /* Removes the default gap between radio items */
-        gap: 0;
-        /* Adds a border around the entire group */
         border: 1px solid #B0B0B0;
-        border-radius: 5px; /* Rounds the corners of the group */
-        overflow: hidden; /* Ensures children respect the border radius */
+        border-radius: 5px;
+        overflow: hidden; /* Ensures child elements respect the rounded corners */
     }
 
-    /* This targets each individual radio button's label */
+    /* Hide the actual radio button circle that Streamlit renders */
+    div[data-testid="stRadio"] input[type="radio"] {
+        display: none;
+    }
+
+    /* Style each label to act as a button segment */
     div[data-testid="stRadio"] label {
-        /* Ensures each segment takes up equal space */
-        flex: 1;
-        /* Hides the actual radio button circle */
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        appearance: none;
-        /* Styling for the non-selected state */
-        background-color: #DDDDDD; /* Grey background */
-        color: black;
-        padding: 6px 0;
+        flex: 1; /* Makes each segment take up equal horizontal space */
         text-align: center;
-        border-right: 1px solid #B0B0B0; /* Separator line */
-        transition: background-color 0.3s, color 0.3s;
+        padding: 6px 0;
+        margin: 0 !important; /* Overrides any default margin */
         cursor: pointer;
-        font-weight: 500;
-        /* Removes any margin that might be pushing them apart */
-        margin: 0 !important;
+        transition: background-color 0.3s, color 0.3s;
+        
+        /* Default, non-selected state */
+        background-color: #DDDDDD; /* Grey */
+        color: black;
+        border-right: 1px solid #B0B0B0; /* Separator line */
     }
 
-    /* Remove the right border from the last segment */
+    /* Remove the separator line from the very last segment */
     div[data-testid="stRadio"] label:last-of-type {
         border-right: none;
     }
     
-    /* Style for the SELECTED segment */
-    div[data-testid="stRadio"] input[type="radio"]:checked + div {
-        background-color: #003087 !important; /* NOAA Sky background */
-        color: white !important;
-        font-weight: bold !important;
+    /* Style the SELECTED label using the powerful :has() pseudo-class.
+       This says "Find a label that has a checked radio button inside it." */
+    div[data-testid="stRadio"] label:has(input[type="radio"]:checked) {
+        background-color: #003087; /* NOAA Sky */
+        color: white;
+        font-weight: bold;
     }
     
-    /* Some versions of Streamlit wrap the label text in a div, this targets that */
-    div[data-testid="stRadio"] label > div {
-        width: 100%;
+    /* Ensure the text itself (which is in a child div) also gets the correct color */
+    div[data-testid="stRadio"] label:has(input[type="radio"]:checked) div {
+        color: white;
     }
 
-
     /* --- Reviewer Display Buttons CSS --- */
-    /* Style for the selected (primary) button */
     div[data-testid="stButton"] > button[kind="primary"] {
-        background-color: #0085CA; /* NOAA Sea Blue for selected button */
+        background-color: #0085CA;
         color: white;
         border: 1px solid #0085CA;
         height: 3em;
     }
-    /* Style for the unselected (secondary) buttons */
     div[data-testid="stButton"] > button[kind="secondary"] {
         height: 3em;
     }
 </style>
 """, unsafe_allow_html=True)
-# --- END: MODIFIED CSS ---
+# --- END: FINAL CSS ---
 
 
 # --- START: REVISED AND CORRECTED SIDEBAR LAYOUT ---
@@ -1034,4 +1027,3 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
