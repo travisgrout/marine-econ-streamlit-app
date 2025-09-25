@@ -285,16 +285,19 @@ def update_mode(mode_label):
 
 # --- START: RESTRUCTURED BUTTON LAYOUT ---
 st.sidebar.header("Public Displays")
-pub_cols = st.sidebar.columns(3)
-with pub_cols[0]:
+# Create a row of 2 for the first two buttons
+row1_cols = st.sidebar.columns(2)
+with row1_cols[0]:
     is_selected = st.session_state.plot_mode == button_map["States"]
     st.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
-with pub_cols[1]:
+with row1_cols[1]:
     is_selected = st.session_state.plot_mode == button_map["Counties"]
     st.button("Counties", on_click=update_mode, args=("Counties",), use_container_width=True, type="primary" if is_selected else "secondary")
-with pub_cols[2]:
-    is_selected = st.session_state.plot_mode == button_map["Regions"]
-    st.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
+
+# Place the third button on its own line
+is_selected = st.session_state.plot_mode == button_map["Regions"]
+st.sidebar.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
+
 
 st.sidebar.header("Reviewer Displays (Temporary)")
 rev_cols = st.sidebar.columns(2)
@@ -485,6 +488,8 @@ if plot_mode in estimate_modes:
                 y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero'),
                 color=alt.Color('OceanSector:N', scale=alt.Scale(domain=sorted_sector_names, range=colors_list), legend=alt.Legend(title="Sectors")),
                 tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('OceanSector:N', title='Sector'), alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)]
+            ).properties(
+                height=600 # --- MODIFICATION 2(a): Increased plot height ---
             ).configure_axis(labelFontSize=14, titleFontSize=16).configure_legend(symbolLimit=len(sorted_sector_names))
             st.altair_chart(chart, use_container_width=True)
         else:
@@ -509,6 +514,8 @@ if plot_mode in estimate_modes:
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
                     color=alt.Color('GeoContribution:N', legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"), sort=sort_order, scale=alt.Scale(domain=sort_order, range=color_range)),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('GeoContribution:N', title='Contribution'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
+                ).properties(
+                    height=600 # --- MODIFICATION 2(b): Increased plot height ---
                 ).configure_axis(labelFontSize=14, titleFontSize=16).configure_legend(symbolLimit=31)
                 st.altair_chart(chart, use_container_width=True)
             else:
@@ -524,7 +531,9 @@ if plot_mode in estimate_modes:
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero'),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
-                ).properties(height=500).configure_axis(labelFontSize=14, titleFontSize=16)
+                ).properties(
+                    height=600 # --- MODIFICATION 2(c): Increased and standardized plot height ---
+                ).configure_axis(labelFontSize=14, titleFontSize=16)
                 st.altair_chart(chart, use_container_width=True)
             else:
                 st.warning("No data available for the selected filters.")
@@ -703,8 +712,8 @@ elif plot_mode == "Error Analysis":
 
         base_chart = alt.Chart(results_df).encode(
              x=alt.X('X_Value:Q', 
-                    scale=alt.Scale(type="log"), 
-                    title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
+                     scale=alt.Scale(type="log"), 
+                     title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
              y=alt.Y('Y_Value:Q', title=y_axis_choice)
         )
 
@@ -753,7 +762,7 @@ elif plot_mode == "Error Analysis":
 
 # --- END: REVISED 'Error Analysis' MODE ---
 
-else:  # "Compare to original ENOW"
+else: # "Compare to original ENOW"
     active_df = comparison_data
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
