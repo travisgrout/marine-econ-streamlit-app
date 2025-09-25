@@ -248,17 +248,16 @@ st.markdown("""
     }
 
     /* --- Custom Tab Styling --- */
-    /* (1) Make tab titles larger */
-    button[data-baseweb="tab"] {
-        font-size: 20rem; /* Increase font size */
-        font-weight: 2000;   /* Make font bolder */
-        padding: 10px 15px; /* Add some padding */
+    /* This selector targets all tab buttons */
+    [data-testid="stTabs"] button {
+        font-size: 1.25rem; /* Increase font size */
+        font-weight: 600;   /* Make font bolder */
     }
 
-    /* (2) Change the highlight color of the selected tab */
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #003087 !important; /* NOAA Sky Blue text */
-        border-bottom-color: #003087 !important; /* NOAA Sky Blue underline */
+    /* This selector targets only the active tab button */
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: #003087; /* NOAA Sky Blue text */
+        border-bottom: 3px solid #003087; /* NOAA Sky Blue underline */
     }
 </style>
 """, unsafe_allow_html=True)
@@ -274,41 +273,40 @@ tab_states, tab_counties, tab_regions, tab_compare, tab_error = st.tabs([
 
 # --- State Estimates Tab ---
 with tab_states:
-    st.sidebar.header("State Display Filters")
-    
-    # Data loading for this tab
-    active_df = open_enow_data
-    if active_df is None:
-        st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
-        st.stop()
-    
-    # Filter data for this specific view
-    states_df = active_df[(active_df['GeoScale'] == 'State') & (active_df['aggregation'] == 'Sector')].copy()
+    with st.expander("Display Options", expanded=True):
+        # Data loading for this tab
+        active_df = open_enow_data
+        if active_df is None:
+            st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
+            st.stop()
+        
+        # Filter data for this specific view
+        states_df = active_df[(active_df['GeoScale'] == 'State') & (active_df['aggregation'] == 'Sector')].copy()
 
-    # --- Sidebar Filters for States ---
-    geo_label = "Select State:"
-    all_geo_label = "All Coastal States"
-    geo_names = states_df["GeoName"].dropna().unique()
-    unique_geos = [all_geo_label] + sorted(geo_names)
-    selected_geo = st.sidebar.selectbox(geo_label, unique_geos, key="state_geo")
+        # --- FILTERS FOR STATES ---
+        geo_label = "Select State:"
+        all_geo_label = "All Coastal States"
+        geo_names = states_df["GeoName"].dropna().unique()
+        unique_geos = [all_geo_label] + sorted(geo_names)
+        selected_geo = st.selectbox(geo_label, unique_geos, key="state_geo")
 
-    ocean_sectors = states_df["OceanSector"].dropna().unique()
-    unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
-    selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors, key="state_sector")
+        ocean_sectors = states_df["OceanSector"].dropna().unique()
+        unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+        selected_sector = st.selectbox("Select Sector:", unique_sectors, key="state_sector")
 
-    metric_choices = list(METRIC_MAP.keys())
-    selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices, key="state_metric")
-    selected_metric_internal = METRIC_MAP[selected_display_metric]
+        metric_choices = list(METRIC_MAP.keys())
+        selected_display_metric = st.selectbox("Select Metric:", metric_choices, key="state_metric")
+        selected_metric_internal = METRIC_MAP[selected_display_metric]
 
-    min_year, max_year = int(states_df["Year"].min()), int(states_df["Year"].max())
-    year_range = st.sidebar.slider(
-        "Select Year Range:",
-        min_value=min_year,
-        max_value=max_year,
-        value=(max(min_year, max_year - 9), max_year),
-        step=1,
-        key="state_year"
-    )
+        min_year, max_year = int(states_df["Year"].min()), int(states_df["Year"].max())
+        year_range = st.slider(
+            "Select Year Range:",
+            min_value=min_year,
+            max_value=max_year,
+            value=(max(min_year, max_year - 9), max_year),
+            step=1,
+            key="state_year"
+        )
 
     # --- Main Page Content for States ---
     title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
@@ -397,67 +395,60 @@ with tab_states:
 
 # --- County Estimates Tab ---
 with tab_counties:
-    st.sidebar.header("County Display Filters")
-    # This section would contain the logic and filters for the County display.
-    # To keep this example concise, it's left as a placeholder.
-    st.info("The County Estimates display is under construction.")
+    with st.expander("Display Options", expanded=True):
+        st.info("The County Estimates display is under construction.")
+        st.write("Filters for this tab would go here.")
 
 
 # --- Regional Estimates Tab ---
 with tab_regions:
-    st.sidebar.header("Regional Display Filters")
-    # This section would contain the logic and filters for the Regional display.
-    st.info("The Regional Estimates display is under construction.")
+    with st.expander("Display Options", expanded=True):
+        st.info("The Regional Estimates display is under construction.")
+        st.write("Filters for this tab would go here.")
 
 
 # --- Compare to ENOW Tab ---
 with tab_compare:
-    st.sidebar.header("Comparison Filters")
-    
-    # Data loading for this tab
-    active_df = comparison_data
-    if active_df is None:
-        st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
-        st.stop()
+    with st.expander("Display Options", expanded=True):
+        # Data loading for this tab
+        active_df = comparison_data
+        if active_df is None:
+            st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
+            st.stop()
 
-    # --- Sidebar Filters for Comparison ---
-    state_df = active_df[active_df['GeoScale'] == 'State']
-    state_names = ["All Coastal States"] + sorted(state_df["GeoName"].dropna().unique())
-    state_abbr_map = {"All Coastal States": "All"}
-    state_abbr_map.update(pd.Series(state_df.state.values, index=state_df.GeoName).to_dict())
+        # --- FILTERS FOR COMPARISON ---
+        state_df = active_df[active_df['GeoScale'] == 'State']
+        state_names = ["All Coastal States"] + sorted(state_df["GeoName"].dropna().unique())
+        state_abbr_map = {"All Coastal States": "All"}
+        state_abbr_map.update(pd.Series(state_df.state.values, index=state_df.GeoName).to_dict())
 
-    selected_state_name = st.sidebar.selectbox("Select State:", state_names, key='compare_state')
-    selected_state_abbr = state_abbr_map[selected_state_name]
+        selected_state_name = st.selectbox("Select State:", state_names, key='compare_state')
+        selected_state_abbr = state_abbr_map[selected_state_name]
 
-    if selected_state_name == "All Coastal States":
-        selected_county = "All Coastal Counties"
-        st.sidebar.selectbox("Select County:", [selected_county], disabled=True, key='compare_county_disabled')
-    else:
-        county_list = ["All Coastal Counties"] + sorted(
-            active_df[(active_df['GeoScale'] == 'County') & (active_df['state'] == selected_state_abbr)]['GeoName'].unique()
-        )
-        selected_county = st.sidebar.selectbox("Select County:", county_list, key='compare_county')
+        if selected_state_name == "All Coastal States":
+            selected_county = "All Coastal Counties"
+            st.selectbox("Select County:", [selected_county], disabled=True, key='compare_county_disabled')
+        else:
+            county_list = ["All Coastal Counties"] + sorted(
+                active_df[(active_df['GeoScale'] == 'County') & (active_df['state'] == selected_state_abbr)]['GeoName'].unique()
+            )
+            selected_county = st.selectbox("Select County:", county_list, key='compare_county')
 
-    # ... (Rest of the compare logic, similar to your original code) ...
     st.title(f"Comparing ENOW Versions for {selected_state_name}")
     st.info("The Compare to ENOW display is under construction.")
 
 
 # --- Error Analysis Tab ---
 with tab_error:
-    st.sidebar.header("Error Analysis Filters")
-
-    # Data loading for this tab
-    active_df = comparison_data
-    if active_df is None:
-        st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
-        st.stop()
-        
-    # --- Sidebar Filters for Error Analysis ---
-    selected_agg = st.sidebar.radio("Aggregation Level:", ("Sector", "Industry"), index=0, key="error_agg")
-    # ... (Rest of the error analysis filters and logic) ...
+    with st.expander("Display Options", expanded=True):
+        # Data loading for this tab
+        active_df = comparison_data
+        if active_df is None:
+            st.error("❌ **Data not found!** Please make sure `enow_version_comparisons.csv` is in the same directory.")
+            st.stop()
+            
+        # --- FILTERS FOR ERROR ANALYSIS ---
+        selected_agg = st.radio("Aggregation Level:", ("Sector", "Industry"), index=0, key="error_agg")
+    
     st.title("Error Analysis: Open ENOW vs. Original ENOW")
     st.info("The Error Analysis display is under construction.")
-
-
-
