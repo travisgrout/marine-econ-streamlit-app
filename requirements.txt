@@ -2,6 +2,6 @@ streamlit
 pandas
 numpy
 altair
-textwrap
 scikit-learn
+
 
