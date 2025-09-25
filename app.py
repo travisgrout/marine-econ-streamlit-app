@@ -697,34 +697,43 @@ elif plot_mode == "Error Analysis":
             alt.Tooltip('Open ENOW Estimate:Q', title='Open ENOW Estimate', format=tooltip_format)
         ]
 
-        scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
-            x=alt.X('X_Value:Q', 
+        # UPDATED: Define a base chart to resolve layering issues
+        base_chart = alt.Chart(results_df).encode(
+             x=alt.X('X_Value:Q', 
                     scale=alt.Scale(type="log"), 
                     title=f'Mean of Original and Open ENOW {x_axis_choice} (Log Scale)'),
-            y=alt.Y('Y_Value:Q', title=y_axis_choice),
+             y=alt.Y('Y_Value:Q', title=y_axis_choice)
+        )
+
+        scatter_points = base_chart.mark_circle(size=100, opacity=0.8).encode(
             color=alt.Color('Group:N', legend=alt.Legend(title="Group")),
             tooltip=tooltip_list
         ).interactive()
 
-        # UPDATED: Conditional trend line with confidence interval
         if selected_sector_filter != "All Marine Sectors":
-            # When a single sector is selected, show a smoothed trend with confidence interval
             st.info("ℹ️ A smoothed trend line (LOESS) with a 95% confidence interval is shown for single-sector analysis.")
             
-            # Define the LOESS transformation
-            loess_transform = scatter.transform_loess('X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8)
+            # Create the confidence interval band from the base chart
+            confidence_interval = base_chart.transform_loess(
+                'X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8
+            ).mark_errorband(extent='ci').encode(
+                color=alt.Color('Group:N') # Match color to the group
+            )
 
-            # Create the confidence interval band and the trend line from the transformation
-            confidence_interval = loess_transform.mark_errorband(extent='ci')
-            trend_line = loess_transform.mark_line(opacity=0.8)
+            # Create the trend line from the base chart
+            trend_line = base_chart.transform_loess(
+                'X_Value', 'Y_Value', groupby=['Group'], bandwidth=0.8
+            ).mark_line(opacity=0.8).encode(
+                color=alt.Color('Group:N')
+            )
             
-            chart = (scatter + confidence_interval + trend_line).properties(height=700)
+            chart = (scatter_points + confidence_interval + trend_line).properties(height=700)
         else:
             # For all sectors, show the standard linear regression line
-            trend_line = scatter.transform_regression(
+            trend_line = scatter_points.transform_regression(
                 'X_Value', 'Y_Value', groupby=['Group']
             ).mark_line()
-            chart = (scatter + trend_line).properties(height=700)
+            chart = (scatter_points + trend_line).properties(height=700)
 
         st.altair_chart(chart, use_container_width=True)
         
@@ -965,6 +974,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
