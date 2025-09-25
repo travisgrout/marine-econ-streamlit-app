@@ -578,7 +578,7 @@ elif plot_mode == "Error Analysis":
         index=0
     )
 
-    # UPDATED: Replaced dropdown with checkboxes for grouping
+    # Replaced dropdown with checkboxes for grouping
     st.sidebar.subheader("Group By:")
     grouping_vars = []
     if st.sidebar.checkbox("OceanSector", value=True):
@@ -644,8 +644,11 @@ elif plot_mode == "Error Analysis":
         valid_enow = group_df[group_df[enow_col] != 0]
         mpd = 100 * (valid_enow[open_col] - valid_enow[enow_col]) / valid_enow[enow_col]
         
+        # UPDATED: Calculate mean of original and open ENOW values
         result_row = {
             'X_Value': (group_df[enow_col].mean() + group_df[open_col].mean()) / 2,
+            'Original ENOW Value': group_df[enow_col].mean(),
+            'Open ENOW Estimate': group_df[open_col].mean(),
             'Mean Percent Difference': mpd.mean() if not mpd.empty else np.nan,
             'Mean Absolute Error': mean_absolute_error(group_df[enow_col], group_df[open_col]),
             'Root Mean Squared Error': np.sqrt(mean_squared_error(group_df[enow_col], group_df[open_col]))
@@ -670,11 +673,16 @@ elif plot_mode == "Error Analysis":
         # --- PLOTTING ---
         st.subheader(f"Plot of {y_axis_choice} vs. Average {x_axis_choice}")
 
-        # Dynamically create the tooltip
-        tooltip_list = [alt.Tooltip('Group:N', title='Group')]
-        tooltip_list.append(alt.Tooltip('GeoName:N', title='Geography'))
-        tooltip_list.append(alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'))
-        tooltip_list.append(alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f'))
+        # UPDATED: Dynamically create the tooltip with new values
+        tooltip_format = '$,.0f' if x_axis_choice in ["Wages", "GDP"] else ',.0f'
+        tooltip_list = [
+            alt.Tooltip('Group:N', title='Group'),
+            alt.Tooltip('GeoName:N', title='Geography'),
+            alt.Tooltip('X_Value:Q', title=f'Mean {x_axis_choice}', format=',.0f'),
+            alt.Tooltip('Y_Value:Q', title=y_axis_choice, format='.2f'),
+            alt.Tooltip('Original ENOW Value:Q', title='Original ENOW Value', format=tooltip_format),
+            alt.Tooltip('Open ENOW Estimate:Q', title='Open ENOW Estimate', format=tooltip_format)
+        ]
 
         scatter = alt.Chart(results_df).mark_circle(size=100, opacity=0.8).encode(
             x=alt.X('X_Value:Q', 
@@ -694,17 +702,33 @@ elif plot_mode == "Error Analysis":
         # --- SUMMARY STATISTICS TABLE ---
         st.subheader("Summary Statistics by Group")
         
-        summary_cols = grouping_vars + ['GeoName', 'Mean Percent Difference', 'Mean Absolute Error', 'Root Mean Squared Error']
+        # UPDATED: Add new values to the summary table
+        summary_cols = grouping_vars + [
+            'GeoName', 
+            'Original ENOW Value', 
+            'Open ENOW Estimate',
+            'Mean Percent Difference', 
+            'Mean Absolute Error', 
+            'Root Mean Squared Error'
+        ]
         summary_table = results_df[summary_cols].copy()
         
-        summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map('{:,.2f}%'.format)
+        summary_table['Mean Percent Difference'] = summary_table['Mean Percent Difference'].map(
+            lambda x: f'{x:,.2f}%' if pd.notna(x) else 'N/A'
+        )
         
-        currency_metrics = ['Mean Absolute Error', 'Root Mean Squared Error']
-        for col in currency_metrics:
+        # UPDATED: Format new value columns along with error metric columns
+        value_and_error_cols = [
+            'Original ENOW Value', 
+            'Open ENOW Estimate', 
+            'Mean Absolute Error', 
+            'Root Mean Squared Error'
+        ]
+        for col in value_and_error_cols:
             if x_axis_choice in ["Wages", "GDP"]:
-                 summary_table[col] = summary_table[col].apply(lambda x: f"${x:,.0f}")
+                 summary_table[col] = summary_table[col].apply(lambda x: f"${x:,.0f}" if pd.notna(x) else 'N/A')
             else:
-                 summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}")
+                 summary_table[col] = summary_table[col].apply(lambda x: f"{x:,.0f}" if pd.notna(x) else 'N/A')
 
         st.dataframe(summary_table.sort_values(by=grouping_vars), use_container_width=True)
 
@@ -920,6 +944,7 @@ else:  # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
