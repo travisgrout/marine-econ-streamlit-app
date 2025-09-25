@@ -603,6 +603,36 @@ if plot_mode in estimate_modes:
     if change_message:
         st.markdown(f"<p style='font-size: 18px; text-align: center;'>{change_message}</p>", unsafe_allow_html=True)
 
+    # --- START: ADDED EXPANDER FOR SECTOR DETAILS (NAICS TABLE) ---
+    # This block displays detailed information about a sector when a single one is selected.
+    if selected_sector != "All Marine Sectors":
+        if selected_sector in SECTOR_DESCRIPTIONS:
+            expander_title = f"The {selected_sector} Sector in Open ENOW"
+            with st.expander(expander_title):
+                st.divider()
+                sector_info = SECTOR_DESCRIPTIONS[selected_sector]
+                st.write(sector_info['description'])
+
+                # Define a function to apply styles to the DataFrame rows
+                def style_naics_table(row):
+                    # Inactive year rows are styled in gray
+                    gray_style = 'background-color: #f0f0f0' 
+                    years_val = row['Years']
+                    is_active = (years_val == "All years") or (years_val.endswith("- present"))
+                    if not is_active:
+                        return [gray_style for _ in row]
+                    
+                    # Default: No style for any other row
+                    return ['' for _ in row]
+
+                # Apply the styling function to the dataframe before displaying it
+                st.dataframe(
+                    sector_info['table'].style.apply(style_naics_table, axis=1),
+                    use_container_width=True,
+                    hide_index=True
+                )
+    # --- END: ADDED EXPANDER FOR SECTOR DETAILS ---
+    
     if not chart_data_to_download.empty:
         with st.expander("View as a Table"):
             table_df = None
@@ -633,21 +663,54 @@ if plot_mode in estimate_modes:
                    file_name=file_name,
                    mime='text/csv',
                 )
-
+                
+    # --- START: MODIFIED EXPANDER FOR GEOGRAPHY (WITH STATE MAPS) ---
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
+    
     if plot_mode != "County Estimates from Public QCEW Data":
         with st.expander(expander_title):
             st.divider()
-            if plot_mode == "Regional Estimates from Public QCEW Data":
-                st.write("Open ENOW splits coastal states into 8 regions. The <strong>Great Lakes</strong> region is the coastal counties/zip codes of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The <strong>Northeast</strong> region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The <strong>Mid-Atlantic</strong> region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The <strong>Southeast</strong> region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The <strong>Gulf</strong> region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The <strong>West</strong> region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the <strong>Pacific</strong> region.")
-            elif plot_mode == "State Estimates from Public QCEW Data":
+            # Logic for "State Estimates" mode
+            if plot_mode == "State Estimates from Public QCEW Data":
                 if selected_geo == "All Coastal States":
-                    st.write("Open ENOW includes all 30 U.S. states with a shoreline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the shoreline. ")
+                    st.write("Open ENOW includes all 30 U.S. states with a shoreline on the ocean or the Great Lakes. Within those states, Open ENOW aggregates data for all counties on or near the shoreline.")
                 else:
-                    map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
-                    if os.path.exists(map_filename): st.image(map_filename, use_container_width=True)
+                    # Display the map and legend for a single selected state
+                    map_col, legend_col = st.columns([2, 1])
+                    with map_col:
+                        map_filename = f"ENOW state maps/Map_{selected_geo.replace(' ', '_')}.jpg"
+                        if os.path.exists(map_filename):
+                            st.image(map_filename, use_container_width=True)
+                        else:
+                            st.warning(f"Map for {selected_geo} not found.")
+                    with legend_col:
+                        st.markdown("Open ENOW estimates marine economy establishments, employment, wages and GDP for the coastal portion of each state.")
+                        legend_html = """
+                            <style>
+                                .legend-item { display: flex; align-items: flex-start; margin-top: 15px; }
+                                .legend-color-box { width: 25px; height: 25px; min-width: 25px; margin-right: 10px; border: 1px solid #333; }
+                                .legend-text { font-size: 1.1rem; }
+                            </style>
+                            <div class="legend-item">
+                                <div class="legend-color-box" style="background-color: #C6E6F0;"></div>
+                                <span class="legend-text">Counties shaded in blue in this map are considered coastal for the purposes of estimating employment in the Living Resources, Marine Construction, Marine Transportation, Offshore Mineral Resources, and Ship and Boat Building sectors.</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color-box" style="background-color: #FFFF00;"></div>
+                                <span class="legend-text">Zip codes shaded in yellow on this map are considered coastal for the purposes of the Tourism and Recreation sector.</span>
+                            </div>
+                        """
+                        st.markdown(legend_html, unsafe_allow_html=True)
+
+            # Logic for "Regional Estimates" mode
+            elif plot_mode == "Regional Estimates from Public QCEW Data":
+                st.write("Open ENOW splits coastal states into 8 regions. The <strong>Great Lakes</strong> region is the coastal counties/zip codes of Minnesota, Michigan, Wisconsin, Illinois, Indiana, Ohio plus Erie County, Pennsylvania and New York counties on the shore of Lake Erie and Lake Ontario. The <strong>Northeast</strong> region is comprised of coastal counties in Maine, New Hampshire, Massachusetts, Rhode Island, and Connecticut. The <strong>Mid-Atlantic</strong> region is comprised of New Jersey, Delaware, Maryland, Virginia, and the Atlantic coasts of Pennsylvania and New York. The <strong>Southeast</strong> region includes coastal counties from North Carolina south to the Florida Keys (Monroe County, Florida). The <strong>Gulf</strong> region includes the west coast of Florida plus coastal counties of Alabama, Mississippi, Louisiana, and Texas. The <strong>West</strong> region is comprised of all coastal counties in California, Oregon, and Washington. Hawaii and coastal Alaska make up the <strong>Pacific</strong> region.")
+    # --- END: MODIFIED EXPANDER ---
+
+
+    
     metric_expander_title = f"{selected_display_metric} in Open ENOW"
     with st.expander(metric_expander_title):
         st.divider()
@@ -990,5 +1053,6 @@ else: # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
