@@ -584,7 +584,7 @@ if plot_mode in estimate_modes:
     if change_message:
         st.markdown(f"<p style='font-size: 18px; text-align: center;'>{change_message}</p>", unsafe_allow_html=True)
 
-    # --- START: MODIFICATION 2 - "VIEW AS TABLE" EXPANDER ---
+    # --- START: MODIFICATION - "VIEW AS TABLE" EXPANDER AND DOWNLOAD BUTTON ---
     if not chart_data_to_download.empty:
         with st.expander("View as a Table"):
             table_df = None
@@ -611,27 +611,27 @@ if plot_mode in estimate_modes:
 
             if table_df is not None:
                 st.dataframe(table_df.style.format("{:,.0f}", na_rep="N/A"), use_container_width=True)
-    # --- END: MODIFICATION 2 ---
-    
-    # --- Download Button (Moved below table expander) ---
-    if not chart_data_to_download.empty:
-        csv_data = convert_df_to_csv(chart_data_to_download)
-        
-        # Clean strings for use in the filename
-        safe_geo = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_geo))
-        safe_sector = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_sector))
-        
-        file_name = f"OpenENOW_{safe_geo}_{safe_sector}_{year_range[0]}_{year_range[1]}.csv"
-        
-        st.download_button(
-           label="📥 Download Plot Data as CSV",
-           data=csv_data,
-           file_name=file_name,
-           mime='text/csv',
-        )
+                
+                # --- Download Button now inside the expander ---
+                csv_table_data = table_df.to_csv().encode('utf-8')
+                
+                # Clean strings for use in the filename
+                safe_geo = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_geo))
+                safe_sector = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_sector))
+                
+                file_name = f"OpenENOW_{safe_geo}_{safe_sector}_{year_range[0]}_{year_range[1]}.csv"
+                
+                st.download_button(
+                   label="📥 Download Table Data as CSV",
+                   data=csv_table_data,
+                   file_name=file_name,
+                   mime='text/csv',
+                )
+    # --- END: MODIFICATION ---
 
-    st.divider()
+    # --- START: MODIFICATION - REMOVED DIVIDER ---
     st.markdown("""<style>div[data-testid="stExpander"] summary {font-size: 1.75rem;}</style>""", unsafe_allow_html=True)
+    # --- END: MODIFICATION ---
     expander_title = "Coastal Geographies in Open ENOW"
     if plot_mode == "State Estimates from Public QCEW Data" and selected_geo != "All Coastal States":
         expander_title = f"{selected_geo} Coastal Geographies in Open ENOW"
