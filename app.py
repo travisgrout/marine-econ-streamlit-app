@@ -241,8 +241,6 @@ Open ENOW covers the same states and economic sectors as the original ENOW and r
 """)
 # --- END: CODE FOR POP-UP WINDOW ---
 
-st.sidebar.header("Display Mode:")
-
 # --- Custom Button Display Mode ---
 # Map button labels to plot_mode values
 button_map = {
@@ -257,12 +255,18 @@ button_map = {
 if 'plot_mode' not in st.session_state:
     st.session_state.plot_mode = button_map["States"]
 
-# Custom CSS to style the primary button as NOAA Sea Blue and make all buttons larger
+# --- START: MODIFIED CSS FOR SIDEBAR COLOR AND BUTTONS ---
+# Custom CSS to style the sidebar background, primary button, and all buttons larger
 st.markdown("""
 <style>
+    /* Set sidebar background color to NOAA Pale Sea Blue */
+    [data-testid="stSidebar"] {
+        background-color: #C6E6F0;
+    }
+    
     /* Style for the selected (primary) button */
     div[data-testid="stButton"] > button[kind="primary"] {
-        background-color: #0085CA;
+        background-color: #0085CA; /* NOAA Sea Blue for selected button */
         color: white;
         border: 1px solid #0085CA;
         height: 3em;
@@ -273,34 +277,34 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+# --- END: MODIFIED CSS ---
 
 # Function to handle button clicks and update state
 def update_mode(mode_label):
     st.session_state.plot_mode = button_map[mode_label]
 
-# Display buttons and handle state changes
-cols1 = st.sidebar.columns(2)
-with cols1[0]:
+# --- START: RESTRUCTURED BUTTON LAYOUT ---
+st.sidebar.header("Public Displays")
+pub_cols = st.sidebar.columns(3)
+with pub_cols[0]:
     is_selected = st.session_state.plot_mode == button_map["States"]
     st.button("States", on_click=update_mode, args=("States",), use_container_width=True, type="primary" if is_selected else "secondary")
-with cols1[1]:
+with pub_cols[1]:
     is_selected = st.session_state.plot_mode == button_map["Counties"]
     st.button("Counties", on_click=update_mode, args=("Counties",), use_container_width=True, type="primary" if is_selected else "secondary")
-
-cols2 = st.sidebar.columns(2)
-with cols2[0]:
+with pub_cols[2]:
     is_selected = st.session_state.plot_mode == button_map["Regions"]
     st.button("Regions", on_click=update_mode, args=("Regions",), use_container_width=True, type="primary" if is_selected else "secondary")
-with cols2[1]:
-    is_selected = st.session_state.plot_mode == button_map["Compare"]
-    st.button("Compare", on_click=update_mode, args=("Compare",), use_container_width=True, type="primary" if is_selected else "secondary", help="Compare to original ENOW")
 
-# Add the fifth button for Error Analysis
-cols3 = st.sidebar.columns(2)
-with cols3[0]:
+st.sidebar.header("Reviewer Displays (Temporary)")
+rev_cols = st.sidebar.columns(2)
+with rev_cols[0]:
+    is_selected = st.session_state.plot_mode == button_map["Compare"]
+    st.button("Compare to ENOW", on_click=update_mode, args=("Compare",), use_container_width=True, type="primary" if is_selected else "secondary", help="Compare to original ENOW")
+with rev_cols[1]:
     is_selected = st.session_state.plot_mode == button_map["Error Analysis"]
     st.button("Error Analysis", on_click=update_mode, args=("Error Analysis",), use_container_width=True, type="primary" if is_selected else "secondary", help="Analyze differences between Open ENOW and original ENOW")
-
+# --- END: RESTRUCTURED BUTTON LAYOUT ---
 
 plot_mode = st.session_state.plot_mode
 
