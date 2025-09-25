@@ -287,7 +287,7 @@ def update_mode(mode_label):
     st.session_state.plot_mode = button_map[mode_label]
 
 # --- START: RESTRUCTURED BUTTON LAYOUT ---
-st.sidebar.header("Public Displays")
+st.sidebar.header("Geographic Scale")
 # --- MODIFICATION 2: Swapped "States" and "Regions" buttons ---
 # Create a row of 2 for the first two buttons
 row1_cols = st.sidebar.columns(2)
@@ -1048,6 +1048,7 @@ else: # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
+
 
 
 
