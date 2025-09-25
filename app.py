@@ -65,12 +65,16 @@ def load_open_enow_data():
     """
     try:
         df = pd.read_csv("openENOWinput.csv")
+        # --- MODIFICATION START: Added 'oceanIndustry' to rename dictionary ---
+        # This ensures the industry column is correctly named for filtering later.
         rename_dict = {
             "geoType": "GeoScale", "geoName": "GeoName", "state": "StateAbbrv",
-            "year": "Year", "enowSector": "OceanSector", "establishments": "Open_Establishments",
-            "employment": "Open_Employment", "wages": "Open_Wages", "real_wages": "Open_RealWages",
+            "year": "Year", "enowSector": "OceanSector", "oceanIndustry": "OceanIndustry",
+            "establishments": "Open_Establishments", "employment": "Open_Employment",
+            "wages": "Open_Wages", "real_wages": "Open_RealWages",
             "gdp": "Open_GDP", "rgdp": "Open_RealGDP"
         }
+        # --- MODIFICATION END ---
         df.rename(columns=rename_dict, inplace=True)
         df_original = pd.read_csv("openENOWinput.csv")
         if 'geoType' in df_original.columns:
@@ -335,17 +339,93 @@ if plot_mode in estimate_modes:
     if active_df is None:
         st.error("❌ **Data not found!** Please make sure `openENOWinput.csv` is in the same directory as the app.")
         st.stop()
-
+    
+    # --- MODIFICATION START: The 'States' display mode logic is heavily revised below ---
     if plot_mode == "State Estimates from Public QCEW Data":
-        # Filter for State-level data aggregated by Sector
-        active_df = active_df[(active_df['GeoScale'] == 'State') & (active_df['aggregation'] == 'Sector')].copy()
+        # Filter for State-level data but keep both Sector and Industry aggregations for now.
+        state_level_data = active_df[active_df['GeoScale'] == 'State'].copy()
         geo_label = "Select State:"
         all_geo_label = "All Coastal States"
         geo_filter_type = 'State'
-        geo_names = active_df["GeoName"].dropna().unique()
+        geo_names = state_level_data["GeoName"].dropna().unique()
         unique_geos = [all_geo_label] + sorted(geo_names)
         selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
+        
+        # DYNAMIC FILTERS FOR STATE MODE
+        ocean_sectors = state_level_data[state_level_data['aggregation'] == 'Sector']["OceanSector"].dropna().unique()
+        unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+        selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors)
 
+        # ADDED: Industry dropdown that depends on the sector selection.
+        if selected_sector != "All Marine Sectors":
+            # Find industries within the selected sector
+            industry_options_df = state_level_data[
+                (state_level_data['aggregation'] == 'Industry') &
+                (state_level_data['OceanSector'] == selected_sector)
+            ]
+            industry_list = ["All Industries in Sector"] + sorted(industry_options_df['OceanIndustry'].dropna().unique())
+            # Enable the dropdown
+            selected_industry = st.sidebar.selectbox("Select Industry:", industry_list)
+        else:
+            # Keep dropdown disabled if "All Marine Sectors" is chosen
+            selected_industry = "All Industries in Sector"
+            st.sidebar.selectbox("Select Industry:", [selected_industry], disabled=True)
+            
+        sorted_sector_names = sorted(ocean_sectors)
+        colors_list = get_sector_colors(len(sorted_sector_names))
+        sector_color_map = dict(zip(sorted_sector_names, colors_list))
+
+        metric_choices = list(METRIC_MAP.keys())
+        selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+        selected_metric_internal = METRIC_MAP[selected_display_metric]
+
+        min_year, max_year = int(state_level_data["Year"].min()), int(state_level_data["Year"].max())
+        default_end_year = max_year
+        default_start_year = max(min_year, max_year - 9)
+        default_range = (default_start_year, default_end_year)
+        year_range = st.sidebar.slider(
+            "Select Year Range:",
+            min_value=min_year,
+            max_value=max_year,
+            value=default_range,
+            step=1
+        )
+
+        # DYNAMIC TITLE that now includes the industry if selected.
+        title_sector_part = "All Marine Sectors"
+        if selected_sector != "All Marine Sectors":
+            if selected_industry != "All Industries in Sector":
+                title_sector_part = selected_industry # Use industry name
+            else:
+                title_sector_part = f"{selected_sector} Sector" # Use sector name
+
+        plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_geo}"
+        st.title(plot_title)
+        
+        # FILTERING LOGIC that handles the new industry dropdown.
+        base_filtered_df = state_level_data[
+            (state_level_data["Year"] >= year_range[0]) &
+            (state_level_data["Year"] <= year_range[1])
+        ]
+        if all_geo_label and selected_geo == all_geo_label:
+            pass # No geo filter needed
+        else:
+            base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_geo]
+            
+        if selected_industry != "All Industries in Sector":
+            # User selected a specific industry, so filter for 'Industry' aggregation.
+            base_filtered_df = base_filtered_df[
+                (base_filtered_df['aggregation'] == 'Industry') &
+                (base_filtered_df['OceanIndustry'] == selected_industry)
+            ]
+        else:
+            # User is at the Sector level, so filter for 'Sector' aggregation.
+            base_filtered_df = base_filtered_df[base_filtered_df['aggregation'] == 'Sector']
+            if selected_sector != "All Marine Sectors":
+                base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
+    
+    # --- MODIFICATION END ---
+    
     elif plot_mode == "County Estimates from Public QCEW Data":
         # Filter for County-level data
         active_df = active_df[(active_df['geoType'] == 'County') & (active_df['aggregation'] == 'Sector')].copy()
@@ -374,6 +454,53 @@ if plot_mode in estimate_modes:
             st.warning("The 'stateName' column is not available in the data for county estimates.")
             selected_state = None
             selected_county_name = None
+            
+        # DYNAMIC FILTERS FOR COUNTY MODE
+        ocean_sectors = active_df["OceanSector"].dropna().unique()
+        unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+        selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors)
+
+        sorted_sector_names = sorted(ocean_sectors)
+        colors_list = get_sector_colors(len(sorted_sector_names))
+        sector_color_map = dict(zip(sorted_sector_names, colors_list))
+
+        metric_choices = list(METRIC_MAP.keys())
+        selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+        selected_metric_internal = METRIC_MAP[selected_display_metric]
+
+        min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
+        default_end_year = max_year
+        default_start_year = max(min_year, max_year - 9)
+        default_range = (default_start_year, default_end_year)
+        year_range = st.sidebar.slider(
+            "Select Year Range:",
+            min_value=min_year,
+            max_value=max_year,
+            value=default_range,
+            step=1
+        )
+        
+        title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
+        if selected_county_name and selected_state:
+            plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_county_name}, {selected_state}"
+        else:
+            plot_title = "Please select a state and county to view estimates"
+        st.title(plot_title)
+        
+        base_filtered_df = active_df[
+            (active_df["Year"] >= year_range[0]) &
+            (active_df["Year"] <= year_range[1])
+        ]
+        if selected_county_name and selected_state:
+            base_filtered_df = base_filtered_df[
+                (base_filtered_df["GeoName"] == selected_county_name) &
+                (base_filtered_df["stateName"] == selected_state)
+            ]
+        else:
+            base_filtered_df = pd.DataFrame()
+            
+        if selected_sector != "All Marine Sectors":
+            base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
 
     else: # Regional Estimates from Public QCEW Data
@@ -385,72 +512,59 @@ if plot_mode in estimate_modes:
         geo_names = active_df["GeoName"].dropna().unique()
         unique_geos = [all_geo_label] + sorted(geo_names)
         selected_geo = st.sidebar.selectbox(geo_label, unique_geos)
-    
-    # --- DYNAMIC FILTERS FOR ESTIMATE MODES ---
-    ocean_sectors = active_df["OceanSector"].dropna().unique()
-    unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
-    selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors)
+        
+        # DYNAMIC FILTERS FOR REGION MODE
+        ocean_sectors = active_df["OceanSector"].dropna().unique()
+        unique_sectors = ["All Marine Sectors"] + sorted(ocean_sectors)
+        selected_sector = st.sidebar.selectbox("Select Sector:", unique_sectors)
 
-    sorted_sector_names = sorted(ocean_sectors)
-    colors_list = get_sector_colors(len(sorted_sector_names))
-    sector_color_map = dict(zip(sorted_sector_names, colors_list))
+        sorted_sector_names = sorted(ocean_sectors)
+        colors_list = get_sector_colors(len(sorted_sector_names))
+        sector_color_map = dict(zip(sorted_sector_names, colors_list))
 
-    metric_choices = list(METRIC_MAP.keys())
-    selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
-    selected_metric_internal = METRIC_MAP[selected_display_metric]
+        metric_choices = list(METRIC_MAP.keys())
+        selected_display_metric = st.sidebar.selectbox("Select Metric:", metric_choices)
+        selected_metric_internal = METRIC_MAP[selected_display_metric]
 
-    min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
-    default_end_year = max_year
-    default_start_year = max(min_year, max_year - 9)
-    default_range = (default_start_year, default_end_year)
-    year_range = st.sidebar.slider(
-        "Select Year Range:",
-        min_value=min_year,
-        max_value=max_year,
-        value=default_range,
-        step=1
-    )
-
-    # --- DYNAMIC TITLE FOR ESTIMATE MODES ---
-    title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
-    if plot_mode == "County Estimates from Public QCEW Data":
-        if selected_county_name and selected_state:
-            plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_county_name}, {selected_state}"
-        else:
-            plot_title = "Please select a state and county to view estimates"
-    else:
+        min_year, max_year = int(active_df["Year"].min()), int(active_df["Year"].max())
+        default_end_year = max_year
+        default_start_year = max(min_year, max_year - 9)
+        default_range = (default_start_year, default_end_year)
+        year_range = st.sidebar.slider(
+            "Select Year Range:",
+            min_value=min_year,
+            max_value=max_year,
+            value=default_range,
+            step=1
+        )
+        
+        title_sector_part = "All Marine Sectors" if selected_sector == "All Marine Sectors" else f"{selected_sector} Sector"
         plot_title = f"{selected_display_metric}: {title_sector_part} in {selected_geo}"
-    st.title(plot_title)
+        st.title(plot_title)
+        
+        base_filtered_df = active_df[
+            (active_df["Year"] >= year_range[0]) &
+            (active_df["Year"] <= year_range[1])
+        ]
+        if all_geo_label and selected_geo == all_geo_label:
+            pass
+        else:
+            base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_geo]
+        
+        if selected_sector != "All Marine Sectors":
+            base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
 
-    # --- PLOTTING AND FILTERING FOR ESTIMATE MODES ---
+    # --- THIS SECTION IS NOW COMMON FOR ALL ESTIMATE MODES ---
     is_gdp_metric = selected_display_metric in ["GDP (nominal)", "Real GDP"]
     if is_gdp_metric:
         gdp_col_to_check = f"Open_{selected_metric_internal}"
-        if not active_df.empty:
-            gdp_is_missing_for_max_year = active_df.loc[active_df['Year'] == max_year, gdp_col_to_check].isnull().all()
+        # Use active_df for this check as it has all the data before filtering
+        if not active_df.empty and 'Year' in active_df.columns:
+            max_year_overall = int(active_df['Year'].max())
+            gdp_is_missing_for_max_year = active_df.loc[active_df['Year'] == max_year_overall, gdp_col_to_check].isnull().all()
             if gdp_is_missing_for_max_year:
-                st.info(f"💡 GDP estimates are not yet available for {max_year}.")
+                st.info(f"💡 GDP estimates are not yet available for {max_year_overall}.")
     
-    base_filtered_df = active_df[
-        (active_df["Year"] >= year_range[0]) &
-        (active_df["Year"] <= year_range[1])
-    ]
-    if plot_mode == "County Estimates from Public QCEW Data":
-        if selected_county_name and selected_state:
-            base_filtered_df = base_filtered_df[
-                (base_filtered_df["GeoName"] == selected_county_name) &
-                (base_filtered_df["stateName"] == selected_state)
-            ]
-        else:
-            base_filtered_df = pd.DataFrame()
-    elif all_geo_label and selected_geo == all_geo_label:
-        pass
-    else:
-        base_filtered_df = base_filtered_df[base_filtered_df["GeoName"] == selected_geo]
-
-    if selected_sector != "All Marine Sectors":
-        base_filtered_df = base_filtered_df[base_filtered_df["OceanSector"] == selected_sector]
-
     y_label_map = {
         "GDP (nominal)": "GDP ($ millions)", "Real GDP": "Real GDP ($ millions, 2017)",
         "Wages (not inflation-adjusted)": "Wages ($ millions)", "Real Wages": "Real Wages ($ millions, 2024)",
@@ -496,7 +610,7 @@ if plot_mode in estimate_modes:
             chart = alt.Chart(plot_df).mark_bar().encode(
                 x=alt.X('Year:O', title='Year'),
                 y=alt.Y('sum(Estimate_value):Q', title=y_label, stack='zero', 
-                        axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(a): Simplify y-axis ---
+                        axis=alt.Axis(tickCount=5)), 
                 color=alt.Color('OceanSector:N', scale=alt.Scale(domain=sorted_sector_names, range=colors_list), legend=alt.Legend(title="Sectors")),
                 tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('OceanSector:N', title='Sector'), alt.Tooltip('sum(Estimate_value):Q', title=selected_display_metric, format=tooltip_format)]
             ).properties(
@@ -526,7 +640,7 @@ if plot_mode in estimate_modes:
                 chart = alt.Chart(plot_df_geos).mark_bar().encode(
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
-                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(b): Simplify y-axis ---
+                           axis=alt.Axis(tickCount=5)), 
                     color=alt.Color('GeoContribution:N', legend=alt.Legend(title=f"{geo_filter_type} Contribution", orient="right"), sort=sort_order, scale=alt.Scale(domain=sort_order, range=color_range)),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('GeoContribution:N', title='Contribution'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
@@ -548,7 +662,7 @@ if plot_mode in estimate_modes:
                 chart = alt.Chart(bar_df).mark_bar(color=sector_color).encode(
                     x=alt.X('Year:O', title='Year'),
                     y=alt.Y('Estimate_value:Q', title=y_label, stack='zero',
-                           axis=alt.Axis(tickCount=5)), # --- MODIFICATION 1(c): Simplify y-axis ---
+                           axis=alt.Axis(tickCount=5)),
                     tooltip=[alt.Tooltip('Year:O', title='Year'), alt.Tooltip('Estimate_value:Q', title=selected_display_metric, format=tooltip_format)]
                 ).properties(
                     height=600
@@ -557,11 +671,9 @@ if plot_mode in estimate_modes:
             else:
                 st.warning("No data available for the selected filters.")
 
-    # --- MODIFICATION 4: Add download button logic ---
     if not chart_data_to_download.empty:
         csv_data = convert_df_to_csv(chart_data_to_download)
         
-        # Clean strings for use in the filename
         safe_geo = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_geo))
         safe_sector = re.sub(r'[^a-zA-Z0-9]', '_', str(selected_sector))
         
@@ -1006,4 +1118,3 @@ else: # "Compare to original ENOW"
 
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
