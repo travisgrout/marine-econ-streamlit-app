@@ -255,14 +255,60 @@ button_map = {
 if 'plot_mode' not in st.session_state:
     st.session_state.plot_mode = button_map["States"]
 
-# Custom CSS to style the sidebar background and buttons
+# --- START: MODIFIED CSS FOR SEGMENTED BUTTON ---
+# Custom CSS to style the sidebar, segmented button, and reviewer buttons
 st.markdown("""
 <style>
     /* Set sidebar background color to NOAA Pale Sea Blue */
     [data-testid="stSidebar"] {
         background-color: #C6E6F0;
     }
+
+    /* --- Segmented Button CSS --- */
+    /* Main container for the radio button group */
+    div[data-testid="stRadio"] {
+        /* Creates a flex container to hold the segments */
+        display: flex;
+        /* Removes padding from the streamlit component */
+        padding: 0px;
+        /* Rounds the corners of the entire button */
+        border-radius: 5px;
+        overflow: hidden; /* Ensures children respect the border radius */
+        border: 1px solid #B0B0B0; /* Adds a border around the group */
+    }
+
+    /* Hide the actual radio button circles */
+    [data-testid="stRadio"] input[type="radio"] {
+        display: none;
+    }
+
+    /* Style for each individual segment (the visible part) */
+    [data-testid="stRadio"] label div {
+        /* Non-selected state */
+        background-color: #DDDDDD; /* Grey background */
+        color: black;
+        padding: 6px 0px; /* Vertical and horizontal padding */
+        text-align: center;
+        border-right: 1px solid #B0B0B0; /* Separator line */
+        transition: background-color 0.3s, color 0.3s;
+        cursor: pointer;
+        font-weight: 500;
+        flex-grow: 1; /* Ensures all segments take up equal space */
+    }
+
+    /* Remove the right border from the last segment */
+    [data-testid="stRadio"] label:last-child div {
+        border-right: none;
+    }
     
+    /* Style for the SELECTED segment */
+    [data-testid="stRadio"] input[type="radio"]:checked + div {
+        background-color: #003087; /* NOAA Sky background */
+        color: white;
+        font-weight: bold;
+    }
+
+    /* --- Reviewer Display Buttons CSS --- */
     /* Style for the selected (primary) button */
     div[data-testid="stButton"] > button[kind="primary"] {
         background-color: #0085CA; /* NOAA Sea Blue for selected button */
@@ -276,6 +322,8 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+# --- END: MODIFIED CSS ---
+
 
 # --- START: REVISED AND CORRECTED SIDEBAR LAYOUT ---
 
@@ -298,7 +346,7 @@ default_index = public_display_options.index(current_mode_key)
 
 # Create the radio button widget. When a user clicks it, the script reruns.
 selected_display = st.sidebar.radio(
-    "Public Display Mode",
+    "Public Display Mode", # This label is hidden but is good for accessibility
     options=public_display_options,
     index=default_index,
     horizontal=True,
