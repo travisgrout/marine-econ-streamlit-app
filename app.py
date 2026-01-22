@@ -205,7 +205,7 @@ SECTOR_DESCRIPTIONS = {
 }
 METRIC_DESCRIPTIONS = {
     "Employment": "Employment estimates in Open ENOW are based on the sum of annual average employment reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates employment in the Louisiana Marine Transportation Sector based on reported annual average employment in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
-    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total annual wages paid reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported annual wages paid in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
+    "Wages (not inflation-adjusted)": "Open ENOW estimates wages paid to workers based on the sum of total wages and salary paid to workers reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates wages in the Louisiana Marine Transportation Sector based on reported wages and salary in four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline. To address gaps in public county-level QCEW data, Open ENOW imputes missing values based on data from other years or broader economic sectors.",
     "Real Wages": "Open ENOW reports inflation-adjusted real wages in 2024 dollars. To estimate real wages, Open ENOW adjusts its nominal wage estimates for changes in the consumer price index (CPI).",
     "Establishments": "Open ENOW estimates the number of employers in a given marine sector based on the sum of establishments reported in the Quarterly Census of Employment and Wages (QCEW) for a given set of NAICS codes and set of coastal counties. For example, Open ENOW estimates the number of establishments in the Louisiana Marine Transportation Sector based on QCEW data for four NAICS codes (334511, 48311, 4883, and 4931) in 18 Louisiana parishes on or near the coastline.",
     "GDP (nominal)": "Open ENOW estimates a sector's contribution to GDP based on the average ratio of wages paid to GDP reported for the relevant industry in the Bureau of Economic Analysis (BEA) GDP by industry in current dollars (SAGDP2) table.",
@@ -511,8 +511,8 @@ if plot_mode in estimate_modes:
                 
             summary_text_templates = {
                 "Employment": f"Approximately <strong>{formatted_value}</strong> people were employed {econ_text_part} in <strong>{latest_year}</strong>.",
-                "Wages (not inflation-adjusted)": f"Workers {econ_text_part} earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>.",
-                "Real Wages": f"Workers {econ_text_part} earned about <strong>{formatted_value}</strong> in total annual wages in <strong>{latest_year}</strong>, adjusted for inflation.",
+                "Wages (not inflation-adjusted)": f"Workers {econ_text_part} earned about <strong>{formatted_value}</strong> in wages and salary in <strong>{latest_year}</strong>.",
+                "Real Wages": f"Workers {econ_text_part} earned about <strong>{formatted_value}</strong> in wages and salary in <strong>{latest_year}</strong>, adjusted for inflation.",
                 "Establishments": f"There were about <strong>{formatted_value}</strong> establishments {econ_text_part} in <strong>{latest_year}</strong>.",
                 "GDP (nominal)": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong>.",
                 "Real GDP": f"The selected sector(s) contributed about <strong>{formatted_value}</strong> to GDP in <strong>{latest_year}</strong> (in chained 2017 dollars)."
@@ -1046,11 +1046,3 @@ else: # "Compare to original ENOW"
             st.warning("Not enough overlapping data to calculate statistics.")
     else:
         st.warning("No overlapping data available to compare for the selected filters.")
-
-
-
-
-
-
-
-
